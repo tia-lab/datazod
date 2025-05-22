@@ -9,6 +9,15 @@ export type SQLDialect = 'sqlite' | 'postgres' | 'mysql'
 export type ColumnPosition = 'start' | 'end'
 
 /**
+ * Auto ID column configuration
+ */
+export interface AutoIdConfig {
+  enabled: boolean
+  name?: string // Default: 'id'
+  type?: 'integer' | 'uuid' // Default: 'integer'
+}
+
+/**
  * Definition for an extra column in the SQL schema
  */
 export interface ExtraColumn {

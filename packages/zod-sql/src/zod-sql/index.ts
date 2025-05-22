@@ -6,7 +6,7 @@ import type {
 	ZodTypeAny
 } from 'zod'
 import { z } from 'zod'
-import { ExtraColumn, SQLDialect } from './types'
+import { AutoIdConfig, ExtraColumn, SQLDialect } from './types'
 
 /**
  * Maps a Zod type to its corresponding SQL data type for SQLite
@@ -253,6 +253,38 @@ function getTimestampColumns(dialect: SQLDialect): string[] {
 }
 
 /**
+ * Gets auto ID column definition based on the SQL dialect and configuration
+ */
+function getAutoIdColumn(dialect: SQLDialect, config: AutoIdConfig | boolean): string {
+	// Default config if only boolean is provided
+	const actualConfig: AutoIdConfig = typeof config === 'boolean'
+		? { enabled: config, name: 'id', type: 'integer' }
+		: { name: 'id', type: 'integer', ...config };
+
+	if (!actualConfig.enabled) {
+		return '';
+	}
+
+	const idName = quoteIdentifier(actualConfig.name || 'id', dialect);
+	
+	switch (dialect) {
+		case 'postgres':
+			return actualConfig.type === 'uuid'
+				? `${idName} UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+				: `${idName} SERIAL PRIMARY KEY`;
+		case 'mysql':
+			return actualConfig.type === 'uuid'
+				? `${idName} CHAR(36) PRIMARY KEY DEFAULT (UUID())`
+				: `${idName} INT AUTO_INCREMENT PRIMARY KEY`;
+		case 'sqlite':
+		default:
+			return actualConfig.type === 'uuid'
+				? `${idName} TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6))))`
+				: `${idName} INTEGER PRIMARY KEY AUTOINCREMENT`;
+	}
+}
+
+/**
  * Configuration options for table generation
  */
 export interface TableOptions {
@@ -262,6 +294,7 @@ export interface TableOptions {
 	flattenDepth?: number
 	extraColumns?: ExtraColumn[]
 	timestamps?: boolean // Adds created_at and updated_at columns
+	autoId?: boolean | AutoIdConfig // Adds an auto-incrementing ID column
 }
 
 /**
@@ -278,7 +311,8 @@ export function createTableDDL<T extends ZodRawShape>(
 		indexes = {},
 		flattenDepth = 2,
 		extraColumns = [],
-		timestamps = false
+		timestamps = false,
+		autoId = false
 	} = options
 	const shape = schema.shape
 	const cols: string[] = []
@@ -330,6 +364,14 @@ export function createTableDDL<T extends ZodRawShape>(
 	const mainCols: string[] = []
 	const endCols: string[] = []
 
+	// Add auto ID column if requested (always at the start)
+	if (autoId) {
+		const autoIdColumnDef = getAutoIdColumn(dialect, autoId);
+		if (autoIdColumnDef) {
+			startCols.push(autoIdColumnDef);
+		}
+	}
+
 	// Process extra columns for 'start' position
 	for (const column of extraColumns) {
 		if (column.position === 'start') {
@@ -375,7 +417,8 @@ export function createTableDDL<T extends ZodRawShape>(
 	// Add compound primary key constraint if specified (and not already set in a column)
 	const hasPrimaryKeyColumn =
 		extraColumns.some((col) => col.primaryKey) ||
-		(primaryKey && !Array.isArray(primaryKey))
+		(primaryKey && !Array.isArray(primaryKey)) ||
+		autoId
 
 	if (primaryKey && Array.isArray(primaryKey) && !hasPrimaryKeyColumn) {
 		constraints.push(
@@ -449,7 +492,8 @@ export function createTableAndIndexes<T extends ZodRawShape>(
 		indexes = {},
 		flattenDepth = 2,
 		extraColumns = [],
-		timestamps = false
+		timestamps = false,
+		autoId = false
 	} = options
 
 	// Create the table statement
