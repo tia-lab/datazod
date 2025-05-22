@@ -1,5 +1,11 @@
 # @datazod/zod-sql
 
+## 0.0.13
+
+### Patch Changes
+
+- IMporve package description
+
 ## 0.0.12
 
 ### Patch Changes
