@@ -13,7 +13,10 @@
 		"test": "bun test",
 		"lint": "eslint \"src/**/*.ts\""
 	},
-	"dependencies": {
+	"peerDependencies": {
+		"zod": "^3.x"
+	},
+	"devDependencies": {
 		"zod": "^3.25.20"
 	},
 	"publishConfig": {

@@ -300,9 +300,9 @@ export interface TableOptions {
 /**
  * Creates a SQL DDL statement from a Zod schema
  */
-export function createTableDDL<T extends ZodRawShape>(
+export function createTableDDL(
 	tableName: string,
-	schema: ZodObject<T>,
+	schema: ZodObject<any>,
 	options: TableOptions = {}
 ): string {
 	const {
@@ -460,19 +460,17 @@ function processNestedObject(
 
 	const shape = objectType.shape
 
-	for (const [nestedKey, nestedType] of Object.entries(shape) as [
-		string,
-		ZodTypeAny
-	][]) {
+	for (const [nestedKey, nestedType] of Object.entries(shape)) {
 		const colName = `${prefix}_${nestedKey}`
+		const zodType = nestedType as ZodTypeAny
 
-		if (nestedType instanceof z.ZodObject && depth > 1) {
+		if (zodType instanceof z.ZodObject && depth > 1) {
 			// Recursively process nested objects
-			processNestedObject(colName, nestedType, cols, depth - 1, dialect)
+			processNestedObject(colName, zodType as ZodObject<any>, cols, depth - 1, dialect)
 		} else {
 			// Add flattened column
-			const sqlType = mapZodToSql(nestedType, dialect)
-			const nullable = isNullable(nestedType) ? '' : ' NOT NULL'
+			const sqlType = mapZodToSql(zodType, dialect)
+			const nullable = isNullable(zodType) ? '' : ' NOT NULL'
 			cols.push(`${quoteIdentifier(colName, dialect)} ${sqlType}${nullable}`)
 		}
 	}
@@ -481,9 +479,9 @@ function processNestedObject(
 /**
  * Creates a SQL DDL statement from a Zod schema and returns the CREATE TABLE and INDEX statements separately
  */
-export function createTableAndIndexes<T extends ZodRawShape>(
+export function createTableAndIndexes(
 	tableName: string,
-	schema: ZodObject<T>,
+	schema: ZodObject<any>,
 	options: TableOptions = {}
 ): { createTable: string; indexes: string[] } {
 	const {
