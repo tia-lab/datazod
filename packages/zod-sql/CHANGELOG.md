@@ -1,5 +1,11 @@
 # @datazod/zod-sql
 
+## 0.0.11
+
+### Patch Changes
+
+- change package exports
+
 ## 0.0.8
 
 ### Patch Changes
