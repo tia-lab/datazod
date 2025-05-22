@@ -1,4 +1,16 @@
-#\!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+#!/usr/bin/env sh
 
-bun run commitlint
+# If the commit is by GitHub Actions bot, skip the script
+branch_name=$(git symbolic-ref --short HEAD)
+
+# If the branch is "changeset-release/main", skip this hook
+if [ "$branch_name" = "changeset-release/main" ]; then
+  exit 0
+fi
+
+# Otherwise, continue with commit linting and message formatting
+npx --no -- commitlint --edit "$1"
+commit_number=$(git rev-list --all --count)
+new_message="[$commit_number] $(cat "$1")"
+
+echo "$new_message" > "$1"

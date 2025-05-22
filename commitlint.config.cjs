@@ -1,7 +1,7 @@
 /* eslint-disable  */
 module.exports = {
   extends: ['@commitlint/config-conventional'],
-
+  // Removed custom parserPreset that was causing issues
   rules: {
     'body-leading-blank': [1, 'always'],
     'body-max-line-length': [2, 'always', 350],
@@ -32,5 +32,6 @@ module.exports = {
         'section' // Section changes
       ]
     ]
+    // Removed custom rules: 'ticket-empty' and 'ticket-pattern'
   }
 }

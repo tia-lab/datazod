@@ -6,7 +6,7 @@ import type {
 	ZodTypeAny
 } from 'zod'
 import { z } from 'zod'
-//test
+
 /**
  * Supported SQL dialects
  */

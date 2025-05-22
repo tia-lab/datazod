@@ -27,3 +27,24 @@ When changes are merged to the main branch:
 ## Configuration
 
 The changesets configuration is in `.changeset/config.json`.
+
+## Commit Format
+
+Commits should follow the conventional commit format:
+
+```
+type(optional-scope): subject
+```
+
+For example:
+```
+feat: add new SQL conversion feature
+fix(zod-sql): resolve type mapping issue
+docs: update API documentation
+```
+
+Including issue numbers in your commit messages is encouraged:
+```
+feat: add new SQL conversion feature (#123)
+fix(zod-sql): resolve type mapping issue (#456)
+```
