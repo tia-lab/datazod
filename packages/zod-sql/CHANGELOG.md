@@ -1,5 +1,11 @@
 # @datazod/zod-sql
 
+## 0.0.15
+
+### Patch Changes
+
+- add schema inference for table generation
+
 ## 0.0.14
 
 ### Patch Changes
