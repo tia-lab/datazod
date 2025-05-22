@@ -1,2 +1,2 @@
 // Main entry point when package is installed
-export * from './src/index.js'
+export * from './src/index.ts'

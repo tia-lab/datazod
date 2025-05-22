@@ -5,9 +5,10 @@
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"module": "ESNext",
-		"moduleResolution": "bundler",
+		"moduleResolution": "Bundler",
 		"allowImportingTsExtensions": true,
-		"noEmit": true
+		"noEmit": true,
+		"isolatedModules": true
 	},
 	"include": ["src/**/*", "index.ts"],
 	"exclude": ["node_modules", "**/*.test.ts"]
