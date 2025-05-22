@@ -17,10 +17,13 @@ npm install @datazod/zod-sql
 #### Features
 
 - Convert Zod schemas to SQL table definitions
-- Support for multiple SQL dialects (SQLite, PostgreSQL, MySQL)
-- Generate type-safe SQL queries
+- Support for multiple SQL dialects (SQLite/Turso, PostgreSQL, MySQL)
+- Flatten nested objects to any depth
+- Correctly map Zod types to their SQL equivalents
+- Auto-generate UUIDs or auto-incrementing IDs
+- Add timestamp columns (created_at, updated_at)
 - Define relationships with foreign keys
-- Control table structure with flexible options
+- Control column ordering and table structure with flexible options
 
 #### Basic Usage
 
