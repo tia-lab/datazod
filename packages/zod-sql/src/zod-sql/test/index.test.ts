@@ -1,7 +1,7 @@
 /// <reference types="bun-types" />
 import { describe, expect, test } from 'bun:test'
 import { z } from 'zod'
-import { createTableAndIndexes, createTableDDL } from '../index'
+import { createTable, createTableDDL } from '../index'
 import { SQLDialect } from '../types'
 
 describe('Zod to SQL converter', () => {
@@ -237,7 +237,7 @@ describe('Zod to SQL converter', () => {
 			email: z.string().email()
 		})
 
-		const { createTable, indexes } = createTableAndIndexes('users', UserSchema, {
+		const { table, indexes } = createTable('users', UserSchema, {
 			primaryKey: 'id',
 			indexes: {
 				users_email_idx: ['email'],
@@ -247,14 +247,14 @@ describe('Zod to SQL converter', () => {
 
 		console.log('\n--- Separated Table and Indexes ---')
 		console.log('CREATE TABLE Statement:')
-		console.log(createTable)
+		console.log(table)
 		console.log('INDEX Statements:')
 		indexes.forEach((idx) => console.log(idx))
 
 		// Check table creation SQL
-		expect(createTable).toContain('"id" TEXT NOT NULL PRIMARY KEY')
-		expect(createTable).toContain('"email" TEXT NOT NULL')
-		expect(createTable).not.toContain('CREATE INDEX')
+		expect(table).toContain('"id" TEXT NOT NULL PRIMARY KEY')
+		expect(table).toContain('"email" TEXT NOT NULL')
+		expect(table).not.toContain('CREATE INDEX')
 
 		// Check index creation SQL
 		expect(indexes).toHaveLength(2)
@@ -282,7 +282,7 @@ describe('Zod to SQL converter', () => {
 			tags: z.array(z.string())
 		})
 
-		const { createTable, indexes } = createTableAndIndexes('users', UserSchema, {
+		const { table, indexes } = createTable('users', UserSchema, {
 			primaryKey: 'id',
 			indexes: {
 				users_email_idx: ['email'],
@@ -311,27 +311,25 @@ describe('Zod to SQL converter', () => {
 
 		console.log('\n--- Comprehensive Example SQL (Separate Statements) ---')
 		console.log('CREATE TABLE Statement:')
-		console.log(createTable)
+		console.log(table)
 		console.log('INDEX Statements:')
 		indexes.forEach((idx) => console.log(idx))
 
-		expect(createTable).toContain('"id" TEXT NOT NULL PRIMARY KEY')
-		expect(createTable).toContain('"metadata_lastLogin" TEXT NOT NULL')
-		expect(createTable).toContain('"metadata_preferences_theme" TEXT NOT NULL')
-		expect(createTable).toContain(
+		expect(table).toContain('"id" TEXT NOT NULL PRIMARY KEY')
+		expect(table).toContain('"metadata_lastLogin" TEXT NOT NULL')
+		expect(table).toContain('"metadata_preferences_theme" TEXT NOT NULL')
+		expect(table).toContain(
 			'"metadata_preferences_notifications" BOOLEAN NOT NULL'
 		)
-		expect(createTable).toContain('"tags" TEXT NOT NULL')
-		expect(createTable).toContain(
-			'"last_login_timestamp" INTEGER NOT NULL DEFAULT 0'
-		)
-		expect(createTable).toContain(
+		expect(table).toContain('"tags" TEXT NOT NULL')
+		expect(table).toContain('"last_login_timestamp" INTEGER NOT NULL DEFAULT 0')
+		expect(table).toContain(
 			'"role_id" INTEGER REFERENCES "roles"("id") ON DELETE CASCADE'
 		)
-		expect(createTable).toContain(
+		expect(table).toContain(
 			'"created_at" TEXT NOT NULL DEFAULT (datetime(\'now\'))'
 		)
-		expect(createTable).not.toContain('CREATE INDEX')
+		expect(table).not.toContain('CREATE INDEX')
 
 		expect(indexes).toHaveLength(2)
 		expect(indexes[0]).toContain(
@@ -423,7 +421,7 @@ describe('Zod to SQL converter', () => {
 		const dialects: SQLDialect[] = ['sqlite', 'postgres', 'mysql']
 
 		for (const dialect of dialects) {
-			const { createTable, indexes } = createTableAndIndexes('users', UserSchema, {
+			const { table, indexes } = createTable('users', UserSchema, {
 				dialect,
 				primaryKey: 'id',
 				indexes: {
@@ -434,23 +432,23 @@ describe('Zod to SQL converter', () => {
 			console.log(
 				`\n--- ${dialect.toUpperCase()} Dialect Separated Statements ---`
 			)
-			console.log(createTable)
+			console.log(table)
 			indexes.forEach((idx) => console.log(idx))
 
 			// Common expectations for all dialects
 			const quoteChar = dialect === 'mysql' ? '`' : '"'
 
-			expect(createTable).toContain(`${quoteChar}id${quoteChar}`)
-			expect(createTable).toContain(`${quoteChar}email${quoteChar}`)
-			expect(createTable).toContain(`${quoteChar}data_value${quoteChar}`)
+			expect(table).toContain(`${quoteChar}id${quoteChar}`)
+			expect(table).toContain(`${quoteChar}email${quoteChar}`)
+			expect(table).toContain(`${quoteChar}data_value${quoteChar}`)
 
 			// Specific type expectations per dialect
 			if (dialect === 'postgres') {
-				expect(createTable).toContain('DOUBLE PRECISION') // for number
+				expect(table).toContain('DOUBLE PRECISION') // for number
 			} else if (dialect === 'mysql') {
-				expect(createTable).toContain('DOUBLE') // for number
+				expect(table).toContain('DOUBLE') // for number
 			} else {
-				expect(createTable).toContain('REAL') // for number in SQLite
+				expect(table).toContain('REAL') // for number in SQLite
 			}
 
 			// Check index format
@@ -692,25 +690,21 @@ describe('Zod to SQL converter', () => {
 
 		for (const dialect of dialects) {
 			// Generate SQL with depth=5, auto UUID, and timestamps
-			const { createTable } = createTableAndIndexes(
-				'complex_table',
-				ComplexSchema,
-				{
-					dialect,
-					flattenDepth: 5, // Deep nesting
-					autoId: {
-						enabled: true,
-						type: 'uuid',
-						name: 'record_id'
-					},
-					timestamps: true
-				}
-			)
+			const { table } = createTable('complex_table', ComplexSchema, {
+				dialect,
+				flattenDepth: 5, // Deep nesting
+				autoId: {
+					enabled: true,
+					type: 'uuid',
+					name: 'record_id'
+				},
+				timestamps: true
+			})
 
 			console.log(
 				`\n--- Complex Schema with Deep Nesting (${dialect.toUpperCase()}) ---`
 			)
-			console.log(createTable)
+			console.log(table)
 
 			// Define quote character based on dialect
 			const q = dialect === 'mysql' ? '`' : '"'
@@ -740,21 +734,21 @@ describe('Zod to SQL converter', () => {
 			// Check for proper column types and hierarchy
 			// 1. Check UUID ID (format varies by dialect)
 			if (dialect === 'postgres') {
-				expect(createTable).toContain(
+				expect(table).toContain(
 					`${q}record_id${q} UUID PRIMARY KEY DEFAULT gen_random_uuid()`
 				)
 			} else if (dialect === 'mysql') {
-				expect(createTable).toContain(
+				expect(table).toContain(
 					`${q}record_id${q} CHAR(36) PRIMARY KEY DEFAULT (UUID())`
 				)
 			} else {
-				expect(createTable).toContain(
+				expect(table).toContain(
 					`${q}record_id${q} TEXT PRIMARY KEY DEFAULT (uuid())`
 				)
 			}
 
 			// 2. Check timestamp columns appear after ID
-			const lines = createTable.split('\n')
+			const lines = table.split('\n')
 			const recordIdLine = lines.findIndex((line) =>
 				line.includes(`${q}record_id${q}`)
 			)
@@ -765,62 +759,52 @@ describe('Zod to SQL converter', () => {
 
 			// 3. Check proper types for various fields
 			// String fields
-			expect(createTable).toContain(`${q}user_username${q} TEXT NOT NULL`)
-			expect(createTable).toContain(`${q}user_profile_firstName${q} TEXT NOT NULL`)
+			expect(table).toContain(`${q}user_username${q} TEXT NOT NULL`)
+			expect(table).toContain(`${q}user_profile_firstName${q} TEXT NOT NULL`)
 
 			// Number fields - should have correct types per dialect
-			expect(createTable).toContain(
+			expect(table).toContain(
 				`${q}user_profile_age${q} ${expectedTypes.int} NOT NULL`
 			)
-			expect(createTable).toContain(
+			expect(table).toContain(
 				`${q}user_profile_address_zipCode${q} ${expectedTypes.int} NOT NULL`
 			)
-			expect(createTable).toContain(
-				`${q}stats_visits${q} ${expectedTypes.int} NOT NULL`
-			)
-			expect(createTable).toContain(
+			expect(table).toContain(`${q}stats_visits${q} ${expectedTypes.int} NOT NULL`)
+			expect(table).toContain(
 				`${q}stats_performance${q} ${expectedTypes.float} NOT NULL`
 			)
-			expect(createTable).toContain(
+			expect(table).toContain(
 				`${q}user_profile_address_country_details_population${q} ${expectedTypes.int} NOT NULL`
 			)
 
 			// Boolean fields
-			expect(createTable).toContain(
-				`${q}settings_notifications${q} BOOLEAN NOT NULL`
-			)
+			expect(table).toContain(`${q}settings_notifications${q} BOOLEAN NOT NULL`)
 
 			// Enum fields
-			expect(createTable).toContain(`${q}settings_theme${q} TEXT NOT NULL`)
+			expect(table).toContain(`${q}settings_theme${q} TEXT NOT NULL`)
 
 			// Date fields
-			expect(createTable).toContain(
+			expect(table).toContain(
 				`${q}stats_lastActive${q} ${expectedTypes.date} NOT NULL`
 			)
 
 			// Array fields - should use the correct type per dialect
-			expect(createTable).toContain(`${q}tags${q} ${expectedTypes.array} NOT NULL`)
-			expect(createTable).toContain(
-				`${q}scores${q} ${expectedTypes.array} NOT NULL`
-			)
-			expect(createTable).toContain(
-				`${q}friends${q} ${expectedTypes.array} NOT NULL`
-			)
-			expect(createTable).toContain(
-				`${q}history${q} ${expectedTypes.array} NOT NULL`
-			)
+			expect(table).toContain(`${q}tags${q} ${expectedTypes.array} NOT NULL`)
+			expect(table).toContain(`${q}scores${q} ${expectedTypes.array} NOT NULL`)
+			expect(table).toContain(`${q}friends${q} ${expectedTypes.array} NOT NULL`)
+			expect(table).toContain(`${q}history${q} ${expectedTypes.array} NOT NULL`)
 
 			// Object as JSON - the metadata field might be TEXT or JSONB
 			const metadataPattern = new RegExp(
 				`${q}metadata${q} (TEXT|JSONB|JSON) NOT NULL`
 			)
-			expect(metadataPattern.test(createTable)).toBe(true)
+			expect(metadataPattern.test(table)).toBe(true)
 
 			// 4. Check deep nesting (5 levels)
-			expect(createTable).toContain(
+			expect(table).toContain(
 				`${q}user_profile_address_country_details_continent${q} TEXT NOT NULL`
 			)
-			expect(createTable).toContain(
+			expect(table).toContain(
 				`${q}user_profile_address_country_details_population${q} ${expectedTypes.int} NOT NULL`
 			)
 		}
