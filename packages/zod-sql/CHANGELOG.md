@@ -1,5 +1,11 @@
 # @datazod/zod-sql
 
+## 0.1.0
+
+### Minor Changes
+
+- refactor(zod-sql): zod-sql package to separate table creation logic
+
 ## 0.0.15
 
 ### Patch Changes
