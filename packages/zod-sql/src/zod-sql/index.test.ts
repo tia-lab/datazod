@@ -530,4 +530,101 @@ describe('Zod to SQL converter', () => {
 		expect(updatedByPos).toBeGreaterThan(emailPos)
 		expect(deletedAtPos).toBeGreaterThan(emailPos)
 	})
+
+	test('should add auto ID column with default settings', () => {
+		const schema = z.object({
+			name: z.string(),
+			email: z.string().email()
+		})
+
+		const sql = createTableDDL('users', schema, {
+			autoId: true
+		})
+		console.log('\n--- Auto ID Column SQL ---')
+		console.log(sql)
+
+		expect(sql).toContain('"id" INTEGER PRIMARY KEY AUTOINCREMENT')
+		expect(sql).toContain('"name" TEXT NOT NULL')
+		expect(sql).toContain('"email" TEXT NOT NULL')
+	})
+
+	test('should add auto ID column with UUID type', () => {
+		const schema = z.object({
+			name: z.string(),
+			email: z.string().email()
+		})
+
+		const sql = createTableDDL('users', schema, {
+			autoId: { enabled: true, type: 'uuid' }
+		})
+		console.log('\n--- Auto UUID Column SQL ---')
+		console.log(sql)
+
+		expect(sql).toContain('"id" TEXT PRIMARY KEY DEFAULT')
+		expect(sql).toContain('randomblob') // Check for UUID generation function
+		expect(sql).toContain('"name" TEXT NOT NULL')
+		expect(sql).toContain('"email" TEXT NOT NULL')
+	})
+
+	test('should add auto ID column with custom name', () => {
+		const schema = z.object({
+			name: z.string(),
+			email: z.string().email()
+		})
+
+		const sql = createTableDDL('users', schema, {
+			autoId: { enabled: true, name: 'user_id' }
+		})
+		console.log('\n--- Custom Auto ID Column SQL ---')
+		console.log(sql)
+
+		expect(sql).toContain('"user_id" INTEGER PRIMARY KEY AUTOINCREMENT')
+		expect(sql).toContain('"name" TEXT NOT NULL')
+		expect(sql).toContain('"email" TEXT NOT NULL')
+	})
+
+	test('should add auto ID column with different database dialects', () => {
+		const schema = z.object({
+			name: z.string(),
+			email: z.string().email()
+		})
+
+		// PostgreSQL
+		const postgresSql = createTableDDL('users', schema, {
+			dialect: 'postgres',
+			autoId: true
+		})
+		console.log('\n--- PostgreSQL Auto ID Column SQL ---')
+		console.log(postgresSql)
+		expect(postgresSql).toContain('"id" SERIAL PRIMARY KEY')
+
+		// MySQL
+		const mysqlSql = createTableDDL('users', schema, {
+			dialect: 'mysql',
+			autoId: true
+		})
+		console.log('\n--- MySQL Auto ID Column SQL ---')
+		console.log(mysqlSql)
+		expect(mysqlSql).toContain('`id` INT AUTO_INCREMENT PRIMARY KEY')
+	})
+
+	test('should combine auto ID and timestamps', () => {
+		const schema = z.object({
+			name: z.string(),
+			email: z.string().email()
+		})
+
+		const sql = createTableDDL('users', schema, {
+			autoId: true,
+			timestamps: true
+		})
+		console.log('\n--- Auto ID with Timestamps SQL ---')
+		console.log(sql)
+
+		expect(sql).toContain('"id" INTEGER PRIMARY KEY AUTOINCREMENT')
+		expect(sql).toContain('"name" TEXT NOT NULL')
+		expect(sql).toContain('"email" TEXT NOT NULL')
+		expect(sql).toContain('"created_at" TEXT NOT NULL DEFAULT')
+		expect(sql).toContain('"updated_at" TEXT NOT NULL DEFAULT')
+	})
 })
