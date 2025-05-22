@@ -1,5 +1,11 @@
 # @datazod/zod-sql
 
+## 0.0.6
+
+### Patch Changes
+
+- 5ba953c: json support and flatten objects
+
 ## 0.0.5
 
 ### Patch Changes
