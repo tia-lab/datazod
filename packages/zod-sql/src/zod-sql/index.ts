@@ -1,12 +1,6 @@
-import type {
-	ZodNumber,
-	ZodObject,
-	ZodRawShape,
-	ZodString,
-	ZodTypeAny
-} from 'zod'
+import type { ZodNumber, ZodObject, ZodString, ZodTypeAny } from 'zod'
 import { z } from 'zod'
-import { AutoIdConfig, ExtraColumn, SQLDialect } from './types'
+import { AutoIdConfig, ExtraColumn, SQLDialect, TableOptions } from './types'
 
 /**
  * Maps a Zod type to its corresponding SQL data type for SQLite
@@ -255,46 +249,38 @@ function getTimestampColumns(dialect: SQLDialect): string[] {
 /**
  * Gets auto ID column definition based on the SQL dialect and configuration
  */
-function getAutoIdColumn(dialect: SQLDialect, config: AutoIdConfig | boolean): string {
+function getAutoIdColumn(
+	dialect: SQLDialect,
+	config: AutoIdConfig | boolean
+): string {
 	// Default config if only boolean is provided
-	const actualConfig: AutoIdConfig = typeof config === 'boolean'
-		? { enabled: config, name: 'id', type: 'integer' }
-		: { name: 'id', type: 'integer', ...config };
+	const actualConfig: AutoIdConfig =
+		typeof config === 'boolean'
+			? { enabled: config, name: 'id', type: 'integer' }
+			: { name: 'id', type: 'integer', ...config }
 
 	if (!actualConfig.enabled) {
-		return '';
+		return ''
 	}
 
-	const idName = quoteIdentifier(actualConfig.name || 'id', dialect);
-	
+	const idName = quoteIdentifier(actualConfig.name || 'id', dialect)
+
 	switch (dialect) {
 		case 'postgres':
 			return actualConfig.type === 'uuid'
 				? `${idName} UUID PRIMARY KEY DEFAULT gen_random_uuid()`
-				: `${idName} SERIAL PRIMARY KEY`;
+				: `${idName} SERIAL PRIMARY KEY`
 		case 'mysql':
 			return actualConfig.type === 'uuid'
 				? `${idName} CHAR(36) PRIMARY KEY DEFAULT (UUID())`
-				: `${idName} INT AUTO_INCREMENT PRIMARY KEY`;
+				: `${idName} INT AUTO_INCREMENT PRIMARY KEY`
 		case 'sqlite':
 		default:
+			// For SQLite/Turso, use uuid() function which is available in Turso
 			return actualConfig.type === 'uuid'
-				? `${idName} TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6))))`
-				: `${idName} INTEGER PRIMARY KEY AUTOINCREMENT`;
+				? `${idName} TEXT PRIMARY KEY DEFAULT (uuid())`
+				: `${idName} INTEGER PRIMARY KEY AUTOINCREMENT`
 	}
-}
-
-/**
- * Configuration options for table generation
- */
-export interface TableOptions {
-	dialect?: SQLDialect // SQL dialect to use (default: 'sqlite')
-	primaryKey?: string | string[]
-	indexes?: Record<string, string[]>
-	flattenDepth?: number
-	extraColumns?: ExtraColumn[]
-	timestamps?: boolean // Adds created_at and updated_at columns
-	autoId?: boolean | AutoIdConfig // Adds an auto-incrementing ID column
 }
 
 /**
@@ -366,9 +352,9 @@ export function createTableDDL(
 
 	// Add auto ID column if requested (always at the start)
 	if (autoId) {
-		const autoIdColumnDef = getAutoIdColumn(dialect, autoId);
+		const autoIdColumnDef = getAutoIdColumn(dialect, autoId)
 		if (autoIdColumnDef) {
-			startCols.push(autoIdColumnDef);
+			startCols.push(autoIdColumnDef)
 		}
 	}
 
@@ -381,12 +367,21 @@ export function createTableDDL(
 
 	// Process each field in the schema
 	for (const [key, type] of Object.entries(shape) as [string, ZodTypeAny][]) {
-		if (type instanceof z.ZodObject && flattenDepth > 0) {
+		// Unwrap the type if it's nullable or optional to get the correct SQL type
+		let unwrappedType = type
+		if (
+			unwrappedType instanceof z.ZodNullable ||
+			unwrappedType instanceof z.ZodOptional
+		) {
+			unwrappedType = unwrappedType.unwrap()
+		}
+
+		if (unwrappedType instanceof z.ZodObject && flattenDepth > 0) {
 			// Flatten nested object
-			processNestedObject(key, type, mainCols, flattenDepth, dialect)
+			processNestedObject(key, unwrappedType, mainCols, flattenDepth, dialect)
 		} else {
 			// Handle primitive types and arrays
-			const sqlType = mapZodToSql(type, dialect)
+			const sqlType = mapZodToSql(unwrappedType, dialect)
 			const nullable = isNullable(type) ? '' : ' NOT NULL'
 
 			// Add PRIMARY KEY directly to the column if it's a single column primary key
@@ -399,9 +394,9 @@ export function createTableDDL(
 		}
 	}
 
-	// Add timestamp columns if requested
+	// Add timestamp columns if requested (after ID but before other columns)
 	if (timestamps) {
-		endCols.push(...getTimestampColumns(dialect))
+		startCols.push(...getTimestampColumns(dialect))
 	}
 
 	// Process extra columns for 'end' position or unspecified position (default to end)
@@ -464,12 +459,28 @@ function processNestedObject(
 		const colName = `${prefix}_${nestedKey}`
 		const zodType = nestedType as ZodTypeAny
 
-		if (zodType instanceof z.ZodObject && depth > 1) {
-			// Recursively process nested objects
-			processNestedObject(colName, zodType as ZodObject<any>, cols, depth - 1, dialect)
+		// Unwrap nullable/optional to get the inner type for type identification
+		// but keep original for nullability check
+		let unwrappedType = zodType
+		if (
+			unwrappedType instanceof z.ZodNullable ||
+			unwrappedType instanceof z.ZodOptional
+		) {
+			unwrappedType = unwrappedType.unwrap()
+		}
+
+		if (unwrappedType instanceof z.ZodObject && depth > 0) {
+			// Recursively process nested objects (changed from depth > 1 to depth > 0)
+			processNestedObject(
+				colName,
+				unwrappedType as ZodObject<any>,
+				cols,
+				depth - 1,
+				dialect
+			)
 		} else {
-			// Add flattened column
-			const sqlType = mapZodToSql(zodType, dialect)
+			// Add flattened column with proper type
+			const sqlType = mapZodToSql(unwrappedType, dialect)
 			const nullable = isNullable(zodType) ? '' : ' NOT NULL'
 			cols.push(`${quoteIdentifier(colName, dialect)} ${sqlType}${nullable}`)
 		}
@@ -501,6 +512,7 @@ export function createTableAndIndexes(
 		flattenDepth,
 		extraColumns,
 		timestamps,
+		autoId,
 		// Don't include indexes in the main statement
 		indexes: {}
 	})
