@@ -1,5 +1,11 @@
 # @datazod/zod-sql
 
+## 0.0.7
+
+### Patch Changes
+
+- d9de740: fix turso table generationn
+
 ## 0.0.6
 
 ### Patch Changes
