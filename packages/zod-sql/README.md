@@ -39,7 +39,7 @@ pnpm add @datazod/zod-sql
 
 ```typescript
 import { z } from 'zod'
-import { createTableDDL } from '@datazod/zod-sql'
+import { createTableDDL, createTable } from '@datazod/zod-sql'
 
 // Define your schema with Zod
 const UserSchema = z.object({
@@ -50,6 +50,7 @@ const UserSchema = z.object({
 	createdAt: z.date()
 })
 
+// Option 1: Generate just the SQL DDL statement
 // Generate SQLite table definition (default dialect)
 const sqliteSQL = createTableDDL('users', UserSchema, {
 	primaryKey: 'id'
@@ -75,6 +76,15 @@ console.log(sqliteSQL)
 //   "isActive" BOOLEAN NOT NULL,
 //   "createdAt" TEXT NOT NULL
 // );
+
+// Option 2: Get SQL and schema types together
+const { table, indexes, schema, structure } = createTable('users', UserSchema, {
+	dialect: 'postgres',
+	primaryKey: 'id'
+})
+
+// Use the schema type for validation and type inference
+type User = z.infer<typeof schema>;
 ```
 
 ## Advanced Features
@@ -244,23 +254,79 @@ const UserSchema = z.object({
 	name: z.string()
 })
 
-const { createTable, indexes } = createTableAndIndexes('users', UserSchema, {
+const { table, indexes, schema, structure } = createTable('users', UserSchema, {
 	primaryKey: 'id',
 	indexes: {
 		users_email_idx: ['email']
 	}
 })
 
-console.log(createTable) // Execute this first in a transaction
+console.log(table) // Execute this first in a transaction
 indexes.forEach((idx) => console.log(idx)) // Then execute each index
+
+// You can also use the schema for validation
+const userData = {
+  id: 'f8c3de3d-1fea-4d7c-a8b0-29f63c4c3454',
+  name: 'John Doe',
+  email: 'john@example.com'
+};
+
+// Validates the data against the schema
+const validUser = schema.parse(userData);
+```
+
+### Type-Safe Data Handling
+
+One of the key benefits of @datazod/zod-sql is the ability to get TypeScript types that match your database schema:
+
+```typescript
+import { z } from 'zod';
+import { createTable } from '@datazod/zod-sql';
+
+// Define your schema
+const ProductSchema = z.object({
+  name: z.string(),
+  price: z.number().positive(),
+  description: z.string().optional(),
+  categories: z.array(z.string())
+});
+
+// Generate SQL and get the table schema
+const { table, schema, structure } = createTable('products', ProductSchema, {
+  autoId: true,
+  timestamps: true
+});
+
+// Get TypeScript type for your table rows
+type Product = z.infer<typeof schema>;
+
+// Now you can use this type with your database operations
+function insertProduct(product: Omit<Product, 'id' | 'created_at' | 'updated_at'>) {
+  // These fields will be auto-generated
+  console.log(`Inserting: ${product.name}`);
+  // In a real app: db.insert('products', product);
+}
+
+// Correctly typed - TypeScript knows about all fields including nested structures
+insertProduct({
+  name: 'Laptop',
+  price: 999.99,
+  description: 'Powerful laptop',
+  categories: ['electronics', 'computers']
+});
 ```
 
 ## API Reference
 
 ### Main Functions
 
-- `createTableDDL(tableName, schema, options)` - Generate complete SQL for table and indexes
-- `createTableAndIndexes(tableName, schema, options)` - Generate separate SQL for table and indexes
+- `createTableDDL(tableName, schema, options)` - Generate SQL for creating tables only
+- `createTable(tableName, schema, options)` - Generate SQL and get type information
+
+### Schema Type Functions
+
+- `extractTableSchema(schema, options)` - Get Zod schema for table rows
+- `extractTableStructure(tableName, schema, options)` - Get detailed table structure
 
 ### Options
 
@@ -323,6 +389,55 @@ Columns are arranged in a specific order:
 5. **End Position Columns**: Extra columns with `position: 'end'` or no position specified
 
 This ordering helps maintain a consistent table structure with important fields at the beginning.
+
+## Type Inference for Table Schemas
+
+One of the key features of this package is its ability to provide TypeScript types that match your database schema:
+
+### Understanding the Return Values
+
+When you call `createTable()`, you get an object with these properties:
+
+```typescript
+const { 
+  table,      // SQL DDL statement for creating the table
+  indexes,    // Array of SQL statements for creating indexes
+  schema,     // Zod schema for validating data against the table structure
+  structure   // Detailed information about table columns and properties
+} = createTable('users', UserSchema, options);
+```
+
+### Using the Schema for Type Safety
+
+```typescript
+// Get the TypeScript type for your table rows
+type User = z.infer<typeof schema>;
+
+// This type includes all columns in your table:
+// - Original fields from your schema
+// - Flattened nested objects based on flattenDepth
+// - Auto-generated fields (id, timestamps)
+// - Extra columns you defined
+```
+
+### Working with Table Structure
+
+The `structure` property gives you programmatic access to column information:
+
+```typescript
+// Inspect column details
+structure.columns.forEach(column => {
+  console.log(`${column.name}: ${column.type} ${column.nullable ? 'NULL' : 'NOT NULL'}`);
+});
+
+// Generate dynamic queries
+function buildSelectQuery(fields: string[] = []) {
+  const columns = fields.length > 0 
+    ? fields.join(', ') 
+    : structure.columns.map(c => c.name).join(', ');
+  return `SELECT ${columns} FROM ${structure.tableName}`;
+}
+```
 
 ## Performance
 
