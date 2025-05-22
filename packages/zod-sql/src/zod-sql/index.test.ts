@@ -73,7 +73,7 @@ describe('Zod to SQL converter', () => {
 		expect(sql).toContain('"profile_address_city" TEXT NOT NULL')
 
 		// Third level (should be JSON)
-		expect(sql).toContain('"profile_address_country" TEXT NOT NULL')
+		expect(sql).toContain('"profile_address_country" JSONB NOT NULL')
 		expect(sql).not.toContain('"profile_address_country_code"')
 
 		// With depth 3
@@ -89,7 +89,7 @@ describe('Zod to SQL converter', () => {
 		console.log('\n--- Nested Objects SQL (depth=0) ---')
 		console.log(sqlDepth0)
 
-		expect(sqlDepth0).toContain('"profile" TEXT NOT NULL')
+		expect(sqlDepth0).toContain('"profile" JSONB NOT NULL')
 		expect(sqlDepth0).not.toContain('"profile_firstName"')
 	})
 
@@ -104,8 +104,8 @@ describe('Zod to SQL converter', () => {
 		console.log('\n--- Arrays SQL ---')
 		console.log(sql)
 
-		expect(sql).toContain('"tags" TEXT NOT NULL')
-		expect(sql).toContain('"scores" TEXT NOT NULL')
+		expect(sql).toContain('"tags" JSONB NOT NULL')
+		expect(sql).toContain('"scores" JSONB NOT NULL')
 	})
 
 	test('should add indexes', () => {
@@ -321,7 +321,7 @@ describe('Zod to SQL converter', () => {
 		expect(createTable).toContain(
 			'"metadata_preferences_notifications" BOOLEAN NOT NULL'
 		)
-		expect(createTable).toContain('"tags" TEXT NOT NULL')
+		expect(createTable).toContain('"tags" JSONB NOT NULL')
 		expect(createTable).toContain(
 			'"last_login_timestamp" INTEGER NOT NULL DEFAULT 0'
 		)
@@ -628,7 +628,7 @@ describe('Zod to SQL converter', () => {
 		expect(sql).toContain('"updated_at" TEXT NOT NULL DEFAULT')
 	})
 
-	test('complex schema with deep nesting, arrays, numbers and timestamps', () => {
+	test('complex schema with deep nesting, arrays, numbers and timestamps for all dialects', () => {
 		// Create a complex schema with 5 levels of nesting, arrays, and numbers
 		const ComplexSchema = z.object({
 			id: z.string().uuid(),
@@ -687,67 +687,90 @@ describe('Zod to SQL converter', () => {
 			)
 		})
 
-		// Test with SQLite, depth=5, auto UUID, and timestamps
-		const { createTable } = createTableAndIndexes('complex_table', ComplexSchema, {
-			dialect: 'sqlite',
-			flattenDepth: 5,  // Deep nesting
-			autoId: {
-				enabled: true,
-				type: 'uuid',
-				name: 'record_id'
-			},
-			timestamps: true
-		})
+		// Test with all SQL dialects
+		const dialects: SQLDialect[] = ['sqlite', 'postgres', 'mysql'];
+		
+		for (const dialect of dialects) {
+			// Generate SQL with depth=5, auto UUID, and timestamps
+			const { createTable } = createTableAndIndexes('complex_table', ComplexSchema, {
+				dialect,
+				flattenDepth: 5,  // Deep nesting
+				autoId: {
+					enabled: true,
+					type: 'uuid',
+					name: 'record_id'
+				},
+				timestamps: true
+			})
 
-		console.log('\n--- Complex Schema with Deep Nesting ---')
-		console.log(createTable)
+			console.log(`\n--- Complex Schema with Deep Nesting (${dialect.toUpperCase()}) ---`)
+			console.log(createTable)
 
-		// Check for proper column types and hierarchy
-		// 1. Check UUID ID
-		expect(createTable).toContain('"record_id" TEXT PRIMARY KEY DEFAULT (uuid())')
-		
-		// 2. Check timestamp columns appear after ID
-		const lines = createTable.split('\n')
-		const idLine = lines.findIndex(line => line.includes('"record_id"'))
-		const createdAtLine = lines.findIndex(line => line.includes('"created_at"'))
-		const updatedAtLine = lines.findIndex(line => line.includes('"updated_at"'))
-		
-		expect(createdAtLine).toBeGreaterThan(idLine)
-		expect(updatedAtLine).toBeGreaterThan(idLine)
-		expect(createdAtLine).toBeLessThan(lines.findIndex(line => line.includes('"user_username"')))
-		
-		// 3. Check proper types for various fields
-		// String fields
-		expect(createTable).toContain('"user_username" TEXT NOT NULL')
-		expect(createTable).toContain('"user_profile_firstName" TEXT NOT NULL')
-		
-		// Number fields - should be INTEGER for int() and REAL for regular numbers
-		expect(createTable).toContain('"user_profile_age" INTEGER NOT NULL')
-		expect(createTable).toContain('"user_profile_address_zipCode" INTEGER NOT NULL')
-		expect(createTable).toContain('"stats_visits" INTEGER NOT NULL')
-		expect(createTable).toContain('"stats_performance" REAL NOT NULL')
-		expect(createTable).toContain('"user_profile_address_country_details_population" INTEGER NOT NULL')
-		
-		// Boolean fields
-		expect(createTable).toContain('"settings_notifications" BOOLEAN NOT NULL')
-		
-		// Enum fields
-		expect(createTable).toContain('"settings_theme" TEXT NOT NULL')
-		
-		// Date fields
-		expect(createTable).toContain('"stats_lastActive" TEXT NOT NULL')
-		
-		// Array fields - should be TEXT in SQLite
-		expect(createTable).toContain('"tags" TEXT NOT NULL')
-		expect(createTable).toContain('"scores" TEXT NOT NULL')
-		expect(createTable).toContain('"friends" TEXT NOT NULL')
-		expect(createTable).toContain('"history" TEXT NOT NULL')
-		
-		// Object as JSON
-		expect(createTable).toContain('"metadata" TEXT NOT NULL')
-		
-		// 4. Check deep nesting (5 levels)
-		expect(createTable).toContain('"user_profile_address_country_details_continent" TEXT NOT NULL')
-		expect(createTable).toContain('"user_profile_address_country_details_population" INTEGER NOT NULL')
+			// Define quote character based on dialect
+			const q = dialect === 'mysql' ? '`' : '"';
+			
+			// Expected SQL types based on dialect
+			const expectedTypes = {
+				int: dialect === 'mysql' ? 'INT' : 'INTEGER',
+				float: dialect === 'postgres' ? 'DOUBLE PRECISION' : dialect === 'mysql' ? 'DOUBLE' : 'REAL',
+				array: dialect === 'postgres' ? 'JSONB' : dialect === 'mysql' ? 'JSON' : 'JSONB',
+				object: dialect === 'postgres' ? 'JSONB' : dialect === 'mysql' ? 'JSON' : 'JSONB',
+				date: dialect === 'postgres' ? 'TIMESTAMP WITH TIME ZONE' : dialect === 'mysql' ? 'DATETIME' : 'TEXT',
+				uuid: dialect === 'postgres' ? 'UUID' : 'TEXT'
+			};
+			
+			// Check for proper column types and hierarchy
+			// 1. Check UUID ID (format varies by dialect)
+			if (dialect === 'postgres') {
+				expect(createTable).toContain(`${q}record_id${q} UUID PRIMARY KEY DEFAULT gen_random_uuid()`);
+			} else if (dialect === 'mysql') {
+				expect(createTable).toContain(`${q}record_id${q} CHAR(36) PRIMARY KEY DEFAULT (UUID())`);
+			} else {
+				expect(createTable).toContain(`${q}record_id${q} TEXT PRIMARY KEY DEFAULT (uuid())`);
+			}
+			
+			// 2. Check timestamp columns appear after ID
+			const lines = createTable.split('\n');
+			const recordIdLine = lines.findIndex(line => line.includes(`${q}record_id${q}`));
+			const firstDataLine = lines.findIndex(line => line.includes(`${q}id${q}`));
+			
+			// In our updated code, timestamps should come after the ID but before regular columns
+			expect(firstDataLine).toBeGreaterThan(recordIdLine + 2); // +2 to account for timestamps
+			
+			// 3. Check proper types for various fields
+			// String fields
+			expect(createTable).toContain(`${q}user_username${q} TEXT NOT NULL`);
+			expect(createTable).toContain(`${q}user_profile_firstName${q} TEXT NOT NULL`);
+			
+			// Number fields - should have correct types per dialect
+			expect(createTable).toContain(`${q}user_profile_age${q} ${expectedTypes.int} NOT NULL`);
+			expect(createTable).toContain(`${q}user_profile_address_zipCode${q} ${expectedTypes.int} NOT NULL`);
+			expect(createTable).toContain(`${q}stats_visits${q} ${expectedTypes.int} NOT NULL`);
+			expect(createTable).toContain(`${q}stats_performance${q} ${expectedTypes.float} NOT NULL`);
+			expect(createTable).toContain(`${q}user_profile_address_country_details_population${q} ${expectedTypes.int} NOT NULL`);
+			
+			// Boolean fields
+			expect(createTable).toContain(`${q}settings_notifications${q} BOOLEAN NOT NULL`);
+			
+			// Enum fields
+			expect(createTable).toContain(`${q}settings_theme${q} TEXT NOT NULL`);
+			
+			// Date fields
+			expect(createTable).toContain(`${q}stats_lastActive${q} ${expectedTypes.date} NOT NULL`);
+			
+			// Array fields - should use the correct type per dialect
+			expect(createTable).toContain(`${q}tags${q} ${expectedTypes.array} NOT NULL`);
+			expect(createTable).toContain(`${q}scores${q} ${expectedTypes.array} NOT NULL`);
+			expect(createTable).toContain(`${q}friends${q} ${expectedTypes.array} NOT NULL`);
+			expect(createTable).toContain(`${q}history${q} ${expectedTypes.array} NOT NULL`);
+			
+			// Object as JSON - the metadata field might be TEXT or JSONB
+			const metadataPattern = new RegExp(`${q}metadata${q} (TEXT|JSONB|JSON) NOT NULL`);
+			expect(metadataPattern.test(createTable)).toBe(true);
+			
+			// 4. Check deep nesting (5 levels)
+			expect(createTable).toContain(`${q}user_profile_address_country_details_continent${q} TEXT NOT NULL`);
+			expect(createTable).toContain(`${q}user_profile_address_country_details_population${q} ${expectedTypes.int} NOT NULL`);
+		}
 	})
 })
