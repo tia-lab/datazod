@@ -1,7 +1,8 @@
 /// <reference types="bun-types" />
 import { describe, expect, test } from 'bun:test'
 import { z } from 'zod'
-import { createTableAndIndexes, createTableDDL, SQLDialect } from './index'
+import { createTableAndIndexes, createTableDDL } from './index'
+import { SQLDialect } from './types'
 
 describe('Zod to SQL converter', () => {
 	test('should convert basic schema to SQL', () => {
