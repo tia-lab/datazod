@@ -12,9 +12,9 @@ export type ColumnPosition = 'start' | 'end'
  * Auto ID column configuration
  */
 export interface AutoIdConfig {
-  enabled: boolean
-  name?: string // Default: 'id'
-  type?: 'integer' | 'uuid' // Default: 'integer'
+	enabled: boolean
+	name?: string // Default: 'id'
+	type?: 'integer' | 'uuid' // Default: 'integer'
 }
 
 /**
@@ -34,4 +34,18 @@ export interface ExtraColumn {
 		onDelete?: 'CASCADE' | 'SET NULL' | 'RESTRICT' | 'NO ACTION' | 'SET DEFAULT'
 		onUpdate?: 'CASCADE' | 'SET NULL' | 'RESTRICT' | 'NO ACTION' | 'SET DEFAULT'
 	}
+}
+
+/**
+ * Configuration options for table generation
+ */
+
+export interface TableOptions {
+	dialect?: SQLDialect // SQL dialect to use (default: 'sqlite')
+	primaryKey?: string | string[]
+	indexes?: Record<string, string[]>
+	flattenDepth?: number
+	extraColumns?: ExtraColumn[]
+	timestamps?: boolean // Adds created_at and updated_at columns
+	autoId?: boolean | AutoIdConfig // Adds an auto-incrementing ID column
 }

@@ -561,7 +561,7 @@ describe('Zod to SQL converter', () => {
 		console.log(sql)
 
 		expect(sql).toContain('"id" TEXT PRIMARY KEY DEFAULT')
-		expect(sql).toContain('randomblob') // Check for UUID generation function
+		expect(sql).toContain('uuid()') // Check for UUID generation function
 		expect(sql).toContain('"name" TEXT NOT NULL')
 		expect(sql).toContain('"email" TEXT NOT NULL')
 	})
@@ -626,5 +626,128 @@ describe('Zod to SQL converter', () => {
 		expect(sql).toContain('"email" TEXT NOT NULL')
 		expect(sql).toContain('"created_at" TEXT NOT NULL DEFAULT')
 		expect(sql).toContain('"updated_at" TEXT NOT NULL DEFAULT')
+	})
+
+	test('complex schema with deep nesting, arrays, numbers and timestamps', () => {
+		// Create a complex schema with 5 levels of nesting, arrays, and numbers
+		const ComplexSchema = z.object({
+			id: z.string().uuid(),
+			user: z.object({
+				username: z.string(),
+				profile: z.object({
+					firstName: z.string(),
+					lastName: z.string(),
+					age: z.number().int(),
+					address: z.object({
+						street: z.string(),
+						city: z.string(),
+						zipCode: z.number().int(),
+						country: z.object({
+							code: z.string(),
+							name: z.string(),
+							details: z.object({
+								continent: z.string(),
+								population: z.number().int()
+							})
+						})
+					})
+				})
+			}),
+			settings: z.object({
+				theme: z.enum(['light', 'dark']),
+				notifications: z.boolean(),
+				preferences: z.object({
+					language: z.string(),
+					timezone: z.string()
+				})
+			}),
+			tags: z.array(z.string()),
+			scores: z.array(z.number()),
+			stats: z.object({
+				visits: z.number().int(),
+				lastActive: z.string().datetime(),
+				performance: z.number()
+			}),
+			metadata: z.record(z.string(), z.any()),  // Object as JSON
+			friends: z.array(
+				z.object({
+					id: z.string(),
+					name: z.string()
+				})
+			),
+			history: z.array(
+				z.object({
+					date: z.string().datetime(),
+					action: z.string(),
+					details: z.object({
+						ip: z.string(),
+						device: z.string()
+					})
+				})
+			)
+		})
+
+		// Test with SQLite, depth=5, auto UUID, and timestamps
+		const { createTable } = createTableAndIndexes('complex_table', ComplexSchema, {
+			dialect: 'sqlite',
+			flattenDepth: 5,  // Deep nesting
+			autoId: {
+				enabled: true,
+				type: 'uuid',
+				name: 'record_id'
+			},
+			timestamps: true
+		})
+
+		console.log('\n--- Complex Schema with Deep Nesting ---')
+		console.log(createTable)
+
+		// Check for proper column types and hierarchy
+		// 1. Check UUID ID
+		expect(createTable).toContain('"record_id" TEXT PRIMARY KEY DEFAULT (uuid())')
+		
+		// 2. Check timestamp columns appear after ID
+		const lines = createTable.split('\n')
+		const idLine = lines.findIndex(line => line.includes('"record_id"'))
+		const createdAtLine = lines.findIndex(line => line.includes('"created_at"'))
+		const updatedAtLine = lines.findIndex(line => line.includes('"updated_at"'))
+		
+		expect(createdAtLine).toBeGreaterThan(idLine)
+		expect(updatedAtLine).toBeGreaterThan(idLine)
+		expect(createdAtLine).toBeLessThan(lines.findIndex(line => line.includes('"user_username"')))
+		
+		// 3. Check proper types for various fields
+		// String fields
+		expect(createTable).toContain('"user_username" TEXT NOT NULL')
+		expect(createTable).toContain('"user_profile_firstName" TEXT NOT NULL')
+		
+		// Number fields - should be INTEGER for int() and REAL for regular numbers
+		expect(createTable).toContain('"user_profile_age" INTEGER NOT NULL')
+		expect(createTable).toContain('"user_profile_address_zipCode" INTEGER NOT NULL')
+		expect(createTable).toContain('"stats_visits" INTEGER NOT NULL')
+		expect(createTable).toContain('"stats_performance" REAL NOT NULL')
+		expect(createTable).toContain('"user_profile_address_country_details_population" INTEGER NOT NULL')
+		
+		// Boolean fields
+		expect(createTable).toContain('"settings_notifications" BOOLEAN NOT NULL')
+		
+		// Enum fields
+		expect(createTable).toContain('"settings_theme" TEXT NOT NULL')
+		
+		// Date fields
+		expect(createTable).toContain('"stats_lastActive" TEXT NOT NULL')
+		
+		// Array fields - should be TEXT in SQLite
+		expect(createTable).toContain('"tags" TEXT NOT NULL')
+		expect(createTable).toContain('"scores" TEXT NOT NULL')
+		expect(createTable).toContain('"friends" TEXT NOT NULL')
+		expect(createTable).toContain('"history" TEXT NOT NULL')
+		
+		// Object as JSON
+		expect(createTable).toContain('"metadata" TEXT NOT NULL')
+		
+		// 4. Check deep nesting (5 levels)
+		expect(createTable).toContain('"user_profile_address_country_details_continent" TEXT NOT NULL')
+		expect(createTable).toContain('"user_profile_address_country_details_population" INTEGER NOT NULL')
 	})
 })
