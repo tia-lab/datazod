@@ -1,15 +1,21 @@
 {
 	"name": "@datazod/zod-sql",
-	"version": "0.0.8",
+	"version": "0.0.10",
 	"private": false,
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
+	"type": "module",
+	"main": "src/index.ts",
+	"types": "src/index.ts",
+	"exports": {
+		".": {
+			"import": "./src/index.ts",
+			"types": "./src/index.ts"
+		}
+	},
 	"files": [
-		"dist"
+		"src"
 	],
 	"scripts": {
 		"dev": "bun src/index.ts",
-		"build": "bun build src/index.ts --outdir dist && tsc --emitDeclarationOnly --outDir dist",
 		"test": "bun test",
 		"lint": "eslint \"src/**/*.ts\""
 	},

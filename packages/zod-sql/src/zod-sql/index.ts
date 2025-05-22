@@ -6,11 +6,12 @@ import type {
 	ZodTypeAny
 } from 'zod'
 import { z } from 'zod'
-
-/**
- * Supported SQL dialects
- */
-export type SQLDialect = 'sqlite' | 'postgres' | 'mysql'
+import type {
+	AutoIdConfig,
+	ExtraColumn,
+	SQLDialect,
+	TableOptions
+} from './types.ts'
 
 /**
  * Maps a Zod type to its corresponding SQL data type for SQLite
@@ -212,6 +213,15 @@ function isNullable(zodType: ZodTypeAny): boolean {
 }
 
 /**
+ * Helper function to detect if a Zod number type is an integer
+ */
+function isInteger(zodType: ZodTypeAny): boolean {
+	if (!(zodType instanceof z.ZodNumber)) return false
+	const checks = zodType._def.checks || []
+	return checks.some((c) => c.kind === 'int')
+}
+
+/**
  * Gets the appropriate identifier quote character for the given SQL dialect
  */
 function getQuoteChar(dialect: SQLDialect): string {
@@ -257,39 +267,40 @@ function getTimestampColumns(dialect: SQLDialect): string[] {
 }
 
 /**
- * Column position in table definition
+ * Gets auto ID column definition based on the SQL dialect and configuration
  */
-export type ColumnPosition = 'start' | 'end'
+function getAutoIdColumn(
+	dialect: SQLDialect,
+	config: AutoIdConfig | boolean
+): string {
+	// Default config if only boolean is provided
+	const actualConfig: AutoIdConfig =
+		typeof config === 'boolean'
+			? { enabled: config, name: 'id', type: 'integer' }
+			: { name: 'id', type: 'integer', ...config }
 
-/**
- * Definition for an extra column in the SQL schema
- */
-export interface ExtraColumn {
-	name: string
-	type: string
-	notNull?: boolean
-	defaultValue?: string
-	primaryKey?: boolean
-	unique?: boolean
-	position?: ColumnPosition // Where to place the column (start or end)
-	references?: {
-		table: string
-		column: string
-		onDelete?: 'CASCADE' | 'SET NULL' | 'RESTRICT' | 'NO ACTION' | 'SET DEFAULT'
-		onUpdate?: 'CASCADE' | 'SET NULL' | 'RESTRICT' | 'NO ACTION' | 'SET DEFAULT'
+	if (!actualConfig.enabled) {
+		return ''
 	}
-}
 
-/**
- * Configuration options for table generation
- */
-export interface TableOptions {
-	dialect?: SQLDialect // SQL dialect to use (default: 'sqlite')
-	primaryKey?: string | string[]
-	indexes?: Record<string, string[]>
-	flattenDepth?: number
-	extraColumns?: ExtraColumn[]
-	timestamps?: boolean // Adds created_at and updated_at columns
+	const idName = quoteIdentifier(actualConfig.name || 'id', dialect)
+
+	switch (dialect) {
+		case 'postgres':
+			return actualConfig.type === 'uuid'
+				? `${idName} UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+				: `${idName} SERIAL PRIMARY KEY`
+		case 'mysql':
+			return actualConfig.type === 'uuid'
+				? `${idName} CHAR(36) PRIMARY KEY DEFAULT (UUID())`
+				: `${idName} INT AUTO_INCREMENT PRIMARY KEY`
+		case 'sqlite':
+		default:
+			// For SQLite/Turso, use uuid() function which is available in Turso
+			return actualConfig.type === 'uuid'
+				? `${idName} TEXT PRIMARY KEY DEFAULT (uuid())`
+				: `${idName} INTEGER PRIMARY KEY AUTOINCREMENT`
+	}
 }
 
 /**
@@ -306,7 +317,8 @@ export function createTableDDL<T extends ZodRawShape>(
 		indexes = {},
 		flattenDepth = 2,
 		extraColumns = [],
-		timestamps = false
+		timestamps = false,
+		autoId = false
 	} = options
 	const shape = schema.shape
 	const cols: string[] = []
@@ -358,6 +370,19 @@ export function createTableDDL<T extends ZodRawShape>(
 	const mainCols: string[] = []
 	const endCols: string[] = []
 
+	// Add auto ID column if requested (always at the start)
+	if (autoId) {
+		const autoIdColumnDef = getAutoIdColumn(dialect, autoId)
+		if (autoIdColumnDef) {
+			startCols.push(autoIdColumnDef)
+		}
+	}
+
+	// Add timestamp columns if requested (after ID but before other columns)
+	if (timestamps) {
+		startCols.push(...getTimestampColumns(dialect))
+	}
+
 	// Process extra columns for 'start' position
 	for (const column of extraColumns) {
 		if (column.position === 'start') {
@@ -367,12 +392,47 @@ export function createTableDDL<T extends ZodRawShape>(
 
 	// Process each field in the schema
 	for (const [key, type] of Object.entries(shape) as [string, ZodTypeAny][]) {
-		if (type instanceof z.ZodObject && flattenDepth > 0) {
+		// Unwrap nullable/optional to get the correct SQL type
+		let unwrappedType = type
+		if (
+			unwrappedType instanceof z.ZodNullable ||
+			unwrappedType instanceof z.ZodOptional
+		) {
+			unwrappedType = unwrappedType.unwrap()
+		}
+
+		if (unwrappedType instanceof z.ZodObject && flattenDepth > 0) {
 			// Flatten nested object
-			processNestedObject(key, type, mainCols, flattenDepth, dialect)
+			processNestedObject(key, unwrappedType, mainCols, flattenDepth, dialect)
+		} else if (unwrappedType instanceof z.ZodNumber) {
+			// Explicitly handle numbers to ensure proper type mapping
+			const isInt = isInteger(unwrappedType)
+			let sqlType: string
+
+			switch (dialect) {
+				case 'postgres':
+					sqlType = isInt ? 'INTEGER' : 'DOUBLE PRECISION'
+					break
+				case 'mysql':
+					sqlType = isInt ? 'INT' : 'DOUBLE'
+					break
+				case 'sqlite':
+				default:
+					sqlType = isInt ? 'INTEGER' : 'REAL'
+			}
+
+			const nullable = isNullable(type) ? '' : ' NOT NULL'
+
+			// Add PRIMARY KEY directly to the column if it's a single column primary key
+			const isPrimaryKey = primaryKey === key && !Array.isArray(primaryKey)
+			const pkStr = isPrimaryKey ? ' PRIMARY KEY' : ''
+
+			mainCols.push(
+				`${quoteIdentifier(key, dialect)} ${sqlType}${nullable}${pkStr}`
+			)
 		} else {
-			// Handle primitive types and arrays
-			const sqlType = mapZodToSql(type, dialect)
+			// Handle other types including arrays
+			const sqlType = mapZodToSql(unwrappedType, dialect)
 			const nullable = isNullable(type) ? '' : ' NOT NULL'
 
 			// Add PRIMARY KEY directly to the column if it's a single column primary key
@@ -383,11 +443,6 @@ export function createTableDDL<T extends ZodRawShape>(
 				`${quoteIdentifier(key, dialect)} ${sqlType}${nullable}${pkStr}`
 			)
 		}
-	}
-
-	// Add timestamp columns if requested
-	if (timestamps) {
-		endCols.push(...getTimestampColumns(dialect))
 	}
 
 	// Process extra columns for 'end' position or unspecified position (default to end)
@@ -403,7 +458,8 @@ export function createTableDDL<T extends ZodRawShape>(
 	// Add compound primary key constraint if specified (and not already set in a column)
 	const hasPrimaryKeyColumn =
 		extraColumns.some((col) => col.primaryKey) ||
-		(primaryKey && !Array.isArray(primaryKey))
+		(primaryKey && !Array.isArray(primaryKey)) ||
+		autoId
 
 	if (primaryKey && Array.isArray(primaryKey) && !hasPrimaryKeyColumn) {
 		constraints.push(
@@ -451,12 +507,41 @@ function processNestedObject(
 	][]) {
 		const colName = `${prefix}_${nestedKey}`
 
-		if (nestedType instanceof z.ZodObject && depth > 1) {
+		// Unwrap nullable/optional to get the inner type for type identification
+		let unwrappedType = nestedType
+		if (
+			unwrappedType instanceof z.ZodNullable ||
+			unwrappedType instanceof z.ZodOptional
+		) {
+			unwrappedType = unwrappedType.unwrap()
+		}
+
+		if (unwrappedType instanceof z.ZodObject && depth > 0) {
+			// Changed from depth > 1 to depth > 0
 			// Recursively process nested objects
-			processNestedObject(colName, nestedType, cols, depth - 1, dialect)
+			processNestedObject(colName, unwrappedType, cols, depth - 1, dialect)
+		} else if (unwrappedType instanceof z.ZodNumber) {
+			// Explicitly handle numbers
+			const isInt = isInteger(unwrappedType)
+			let sqlType: string
+
+			switch (dialect) {
+				case 'postgres':
+					sqlType = isInt ? 'INTEGER' : 'DOUBLE PRECISION'
+					break
+				case 'mysql':
+					sqlType = isInt ? 'INT' : 'DOUBLE'
+					break
+				case 'sqlite':
+				default:
+					sqlType = isInt ? 'INTEGER' : 'REAL'
+			}
+
+			const nullable = isNullable(nestedType) ? '' : ' NOT NULL'
+			cols.push(`${quoteIdentifier(colName, dialect)} ${sqlType}${nullable}`)
 		} else {
 			// Add flattened column
-			const sqlType = mapZodToSql(nestedType, dialect)
+			const sqlType = mapZodToSql(unwrappedType, dialect)
 			const nullable = isNullable(nestedType) ? '' : ' NOT NULL'
 			cols.push(`${quoteIdentifier(colName, dialect)} ${sqlType}${nullable}`)
 		}
@@ -477,7 +562,8 @@ export function createTableAndIndexes<T extends ZodRawShape>(
 		indexes = {},
 		flattenDepth = 2,
 		extraColumns = [],
-		timestamps = false
+		timestamps = false,
+		autoId = false
 	} = options
 
 	// Create the table statement
@@ -487,6 +573,7 @@ export function createTableAndIndexes<T extends ZodRawShape>(
 		flattenDepth,
 		extraColumns,
 		timestamps,
+		autoId,
 		// Don't include indexes in the main statement
 		indexes: {}
 	})
@@ -506,88 +593,3 @@ export function createTableAndIndexes<T extends ZodRawShape>(
 		indexes: indexStatements
 	}
 }
-
-/**
- * EXAMPLE USAGE:
- *
- * const UserSchema = z.object({
- *   id: z.string().uuid(),
- *   name: z.string(),
- *   age: z.number().int().optional(),
- *   email: z.string().email(),
- *   metadata: z.object({
- *     lastLogin: z.string().datetime(),
- *     preferences: z.object({
- *       theme: z.enum(['light', 'dark']),
- *       notifications: z.boolean()
- *     })
- *   }),
- *   tags: z.array(z.string())
- * });
- *
- * // SQLite (default)
- * const sqliteDDL = createTableDDL('users', UserSchema, {
- *   dialect: 'sqlite', // Optional, this is the default
- *   primaryKey: 'id',
- *   indexes: {
- *     'users_email_idx': ['email'],
- *     'users_metadata_lastLogin_idx': ['metadata_lastLogin']
- *   },
- *   flattenDepth: 2,
- *   extraColumns: [
- *     {
- *       name: 'id_in_other_system',
- *       type: 'TEXT',
- *       position: 'start' // This column will appear before schema columns
- *     },
- *     {
- *       name: 'last_login_timestamp',
- *       type: 'INTEGER',
- *       notNull: true,
- *       defaultValue: '0',
- *       position: 'end' // Explicitly specify end position (this is the default)
- *     },
- *     {
- *       name: 'role_id',
- *       type: 'INTEGER',
- *       references: {
- *         table: 'roles',
- *         column: 'id',
- *         onDelete: 'CASCADE'
- *       }
- *       // No position specified, defaults to 'end'
- *     }
- *   ],
- *   timestamps: true  // Adds created_at and updated_at columns
- * });
- *
- * // PostgreSQL
- * const postgresDDL = createTableDDL('users', UserSchema, {
- *   dialect: 'postgres',
- *   primaryKey: 'id',
- *   indexes: {
- *     'users_email_idx': ['email']
- *   },
- *   timestamps: true
- * });
- *
- * // MySQL
- * const mysqlDDL = createTableDDL('users', UserSchema, {
- *   dialect: 'mysql',
- *   primaryKey: 'id',
- *   timestamps: true
- * });
- *
- * console.log(sqliteDDL);
- *
- * // For transaction compatibility, you may want to separate the table and index creation:
- * const { createTable, indexes } = createTableAndIndexes('users', UserSchema, {
- *   dialect: 'postgres',
- *   primaryKey: 'id',
- *   indexes: {
- *     'users_email_idx': ['email']
- *   }
- * });
- * console.log(createTable);  // Execute this first
- * indexes.forEach(idx => console.log(idx));  // Then execute each index separately
- */
