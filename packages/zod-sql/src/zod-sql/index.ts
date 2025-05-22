@@ -37,13 +37,13 @@ function mapZodToSQLite(zodType: ZodTypeAny): string {
 	// Arrays
 	if (zodType instanceof z.ZodArray) {
 		// Store any array as JSON
-		return 'TEXT' // SQLite doesn't have native JSONB, using TEXT
+		return 'JSONB' // Use JSONB for better querying
 	}
 
 	// Objects
 	if (zodType instanceof z.ZodObject) {
 		// Store object as JSON
-		return 'TEXT' // SQLite doesn't have native JSONB, using TEXT
+		return 'JSONB' // Use JSONB for better querying
 	}
 
 	// Enums
@@ -199,6 +199,15 @@ function mapZodToSql(
  */
 function isNullable(zodType: ZodTypeAny): boolean {
 	return zodType.isOptional() || zodType.isNullable()
+}
+
+/**
+ * Helper function to detect if a Zod number type is an integer
+ */
+function isInteger(zodType: ZodTypeAny): boolean {
+	if (!(zodType instanceof z.ZodNumber)) return false;
+	const checks = zodType._def.checks || [];
+	return checks.some((c) => c.kind === 'int');
 }
 
 /**
@@ -379,8 +388,59 @@ export function createTableDDL(
 		if (unwrappedType instanceof z.ZodObject && flattenDepth > 0) {
 			// Flatten nested object
 			processNestedObject(key, unwrappedType, mainCols, flattenDepth, dialect)
+		} else if (unwrappedType instanceof z.ZodNumber) {
+			// Explicitly handle numbers to ensure proper type mapping
+			const isInt = isInteger(unwrappedType);
+			let sqlType: string;
+			
+			switch (dialect) {
+				case 'postgres':
+					sqlType = isInt ? 'INTEGER' : 'DOUBLE PRECISION';
+					break;
+				case 'mysql':
+					sqlType = isInt ? 'INT' : 'DOUBLE';
+					break;
+				case 'sqlite':
+				default:
+					sqlType = isInt ? 'INTEGER' : 'REAL';
+			}
+			
+			const nullable = isNullable(type) ? '' : ' NOT NULL';
+			
+			// Add PRIMARY KEY directly to the column if it's a single column primary key
+			const isPrimaryKey = primaryKey === key && !Array.isArray(primaryKey);
+			const pkStr = isPrimaryKey ? ' PRIMARY KEY' : '';
+			
+			mainCols.push(
+				`${quoteIdentifier(key, dialect)} ${sqlType}${nullable}${pkStr}`
+			);
+		} else if (unwrappedType instanceof z.ZodArray) {
+			// Explicitly handle arrays
+			let sqlType: string;
+			
+			switch (dialect) {
+				case 'postgres':
+					sqlType = 'JSONB';
+					break;
+				case 'mysql':
+					sqlType = 'JSON';
+					break;
+				case 'sqlite':
+				default:
+					sqlType = 'JSONB';
+			}
+			
+			const nullable = isNullable(type) ? '' : ' NOT NULL';
+			
+			// Add PRIMARY KEY directly to the column if it's a single column primary key
+			const isPrimaryKey = primaryKey === key && !Array.isArray(primaryKey);
+			const pkStr = isPrimaryKey ? ' PRIMARY KEY' : '';
+			
+			mainCols.push(
+				`${quoteIdentifier(key, dialect)} ${sqlType}${nullable}${pkStr}`
+			);
 		} else {
-			// Handle primitive types and arrays
+			// Handle other types
 			const sqlType = mapZodToSql(unwrappedType, dialect)
 			const nullable = isNullable(type) ? '' : ' NOT NULL'
 
@@ -478,6 +538,43 @@ function processNestedObject(
 				depth - 1,
 				dialect
 			)
+		} else if (unwrappedType instanceof z.ZodNumber) {
+			// Explicitly handle numbers to ensure proper type mapping
+			const isInt = isInteger(unwrappedType);
+			let sqlType: string;
+			
+			switch (dialect) {
+				case 'postgres':
+					sqlType = isInt ? 'INTEGER' : 'DOUBLE PRECISION';
+					break;
+				case 'mysql':
+					sqlType = isInt ? 'INT' : 'DOUBLE';
+					break;
+				case 'sqlite':
+				default:
+					sqlType = isInt ? 'INTEGER' : 'REAL';
+			}
+			
+			const nullable = isNullable(zodType) ? '' : ' NOT NULL';
+			cols.push(`${quoteIdentifier(colName, dialect)} ${sqlType}${nullable}`);
+		} else if (unwrappedType instanceof z.ZodArray) {
+			// Explicitly handle arrays
+			let sqlType: string;
+			
+			switch (dialect) {
+				case 'postgres':
+					sqlType = 'JSONB';
+					break;
+				case 'mysql':
+					sqlType = 'JSON';
+					break;
+				case 'sqlite':
+				default:
+					sqlType = 'JSONB';
+			}
+			
+			const nullable = isNullable(zodType) ? '' : ' NOT NULL';
+			cols.push(`${quoteIdentifier(colName, dialect)} ${sqlType}${nullable}`);
 		} else {
 			// Add flattened column with proper type
 			const sqlType = mapZodToSql(unwrappedType, dialect)
