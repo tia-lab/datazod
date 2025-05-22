@@ -1,5 +1,11 @@
 # @datazod/zod-sql
 
+## 0.0.14
+
+### Patch Changes
+
+- improve folder structure and smaller files
+
 ## 0.0.13
 
 ### Patch Changes
