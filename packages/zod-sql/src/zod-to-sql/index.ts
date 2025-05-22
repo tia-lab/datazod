@@ -1,0 +1,582 @@
+import type {
+	ZodNumber,
+	ZodObject,
+	ZodRawShape,
+	ZodString,
+	ZodTypeAny,
+	ZodBoolean,
+	ZodEnum,
+	ZodDate,
+	ZodArray,
+	ZodNullable,
+	ZodOptional
+} from 'zod'
+import { z } from 'zod'
+
+/**
+ * Supported SQL dialects
+ */
+export type SQLDialect = 'sqlite' | 'postgres' | 'mysql'
+
+/**
+ * Maps a Zod type to its corresponding SQL data type for SQLite
+ */
+function mapZodToSQLite(zodType: ZodTypeAny): string {
+	// Unwrap nullable/optional to get the inner type
+	if (zodType instanceof z.ZodNullable || zodType instanceof z.ZodOptional) {
+		return mapZodToSQLite(zodType.unwrap())
+	}
+
+	// String types
+	if (zodType instanceof z.ZodString) {
+		// Handle special string formats
+		const checks = (zodType as ZodString)._def.checks
+		const hasDatetime = checks?.some((c) => c.kind === 'datetime')
+		if (hasDatetime) {
+			return 'TEXT' // Store datetime as ISO8601 string
+		}
+		return 'TEXT'
+	}
+
+	// Number types
+	if (zodType instanceof z.ZodNumber) {
+		const checks = (zodType as ZodNumber)._def.checks
+		const isInt = checks?.some((c) => c.kind === 'int')
+		return isInt ? 'INTEGER' : 'REAL'
+	}
+
+	// Boolean
+	if (zodType instanceof z.ZodBoolean) {
+		return 'BOOLEAN'
+	}
+
+	// Arrays
+	if (zodType instanceof z.ZodArray) {
+		// Store any array as JSON
+		return 'TEXT' // SQLite doesn't have native JSONB, using TEXT
+	}
+
+	// Objects
+	if (zodType instanceof z.ZodObject) {
+		// Store object as JSON
+		return 'TEXT' // SQLite doesn't have native JSONB, using TEXT
+	}
+
+	// Enums
+	if (zodType instanceof z.ZodEnum) {
+		return 'TEXT'
+	}
+
+	// Dates
+	if (zodType instanceof z.ZodDate) {
+		return 'TEXT' // Store as ISO string
+	}
+
+	// Default for unknown types
+	return 'TEXT'
+}
+
+/**
+ * Maps a Zod type to its corresponding SQL data type for PostgreSQL
+ */
+function mapZodToPostgres(zodType: ZodTypeAny): string {
+	// Unwrap nullable/optional to get the inner type
+	if (zodType instanceof z.ZodNullable || zodType instanceof z.ZodOptional) {
+		return mapZodToPostgres(zodType.unwrap())
+	}
+
+	// String types
+	if (zodType instanceof z.ZodString) {
+		// Handle special string formats
+		const checks = (zodType as ZodString)._def.checks
+		const hasDatetime = checks?.some((c) => c.kind === 'datetime')
+		if (hasDatetime) {
+			return 'TIMESTAMP WITH TIME ZONE' // Native timestamp type
+		}
+		return 'TEXT'
+	}
+
+	// Number types
+	if (zodType instanceof z.ZodNumber) {
+		const checks = (zodType as ZodNumber)._def.checks
+		const isInt = checks?.some((c) => c.kind === 'int')
+		return isInt ? 'INTEGER' : 'DOUBLE PRECISION'
+	}
+
+	// Boolean
+	if (zodType instanceof z.ZodBoolean) {
+		return 'BOOLEAN'
+	}
+
+	// Arrays
+	if (zodType instanceof z.ZodArray) {
+		// Store any array as JSON
+		return 'JSONB'
+	}
+
+	// Objects
+	if (zodType instanceof z.ZodObject) {
+		// Store object as JSON
+		return 'JSONB'
+	}
+
+	// Enums
+	if (zodType instanceof z.ZodEnum) {
+		return 'TEXT'
+	}
+
+	// Dates
+	if (zodType instanceof z.ZodDate) {
+		return 'TIMESTAMP WITH TIME ZONE'
+	}
+
+	// Default for unknown types
+	return 'TEXT'
+}
+
+/**
+ * Maps a Zod type to its corresponding SQL data type for MySQL
+ */
+function mapZodToMySQL(zodType: ZodTypeAny): string {
+	// Unwrap nullable/optional to get the inner type
+	if (zodType instanceof z.ZodNullable || zodType instanceof z.ZodOptional) {
+		return mapZodToMySQL(zodType.unwrap())
+	}
+
+	// String types
+	if (zodType instanceof z.ZodString) {
+		// Handle special string formats
+		const checks = (zodType as ZodString)._def.checks
+		const hasDatetime = checks?.some((c) => c.kind === 'datetime')
+		if (hasDatetime) {
+			return 'DATETIME'
+		}
+		return 'TEXT'
+	}
+
+	// Number types
+	if (zodType instanceof z.ZodNumber) {
+		const checks = (zodType as ZodNumber)._def.checks
+		const isInt = checks?.some((c) => c.kind === 'int')
+		return isInt ? 'INT' : 'DOUBLE'
+	}
+
+	// Boolean
+	if (zodType instanceof z.ZodBoolean) {
+		return 'BOOLEAN'
+	}
+
+	// Arrays
+	if (zodType instanceof z.ZodArray) {
+		// Store any array as JSON
+		return 'JSON' // MySQL 5.7.8+ supports JSON
+	}
+
+	// Objects
+	if (zodType instanceof z.ZodObject) {
+		// Store object as JSON
+		return 'JSON' // MySQL 5.7.8+ supports JSON
+	}
+
+	// Enums
+	if (zodType instanceof z.ZodEnum) {
+		return 'TEXT'
+	}
+
+	// Dates
+	if (zodType instanceof z.ZodDate) {
+		return 'DATETIME'
+	}
+
+	// Default for unknown types
+	return 'TEXT'
+}
+
+/**
+ * Maps a Zod type to its corresponding SQL data type based on the dialect
+ */
+function mapZodToSql(zodType: ZodTypeAny, dialect: SQLDialect = 'sqlite'): string {
+	switch (dialect) {
+		case 'postgres':
+			return mapZodToPostgres(zodType)
+		case 'mysql':
+			return mapZodToMySQL(zodType)
+		case 'sqlite':
+		default:
+			return mapZodToSQLite(zodType)
+	}
+}
+
+/**
+ * Determines if a Zod type is nullable or optional
+ */
+function isNullable(zodType: ZodTypeAny): boolean {
+	return zodType.isOptional() || zodType.isNullable()
+}
+
+/**
+ * Gets the appropriate identifier quote character for the given SQL dialect
+ */
+function getQuoteChar(dialect: SQLDialect): string {
+	return dialect === 'mysql' ? '`' : '"'
+}
+
+/**
+ * Quotes an identifier (table, column) according to the SQL dialect
+ */
+function quoteIdentifier(identifier: string, dialect: SQLDialect): string {
+	const q = getQuoteChar(dialect)
+	return `${q}${identifier}${q}`
+}
+
+/**
+ * Gets timestamp column definitions based on the SQL dialect
+ */
+function getTimestampColumns(dialect: SQLDialect): string[] {
+	switch (dialect) {
+		case 'postgres':
+			return [
+				quoteIdentifier('created_at', dialect) + ' TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()',
+				quoteIdentifier('updated_at', dialect) + ' TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()'
+			]
+		case 'mysql':
+			return [
+				quoteIdentifier('created_at', dialect) + ' TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP',
+				quoteIdentifier('updated_at', dialect) + ' TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+			]
+		case 'sqlite':
+		default:
+			return [
+				quoteIdentifier('created_at', dialect) + ' TEXT NOT NULL DEFAULT (datetime(\'now\'))',
+				quoteIdentifier('updated_at', dialect) + ' TEXT NOT NULL DEFAULT (datetime(\'now\'))'
+			]
+	}
+}
+
+/**
+ * Column position in table definition
+ */
+export type ColumnPosition = 'start' | 'end'
+
+/**
+ * Definition for an extra column in the SQL schema
+ */
+export interface ExtraColumn {
+	name: string
+	type: string
+	notNull?: boolean
+	defaultValue?: string
+	primaryKey?: boolean
+	unique?: boolean
+	position?: ColumnPosition // Where to place the column (start or end)
+	references?: {
+		table: string
+		column: string
+		onDelete?: 'CASCADE' | 'SET NULL' | 'RESTRICT' | 'NO ACTION' | 'SET DEFAULT'
+		onUpdate?: 'CASCADE' | 'SET NULL' | 'RESTRICT' | 'NO ACTION' | 'SET DEFAULT'
+	}
+}
+
+/**
+ * Configuration options for table generation
+ */
+export interface TableOptions {
+	dialect?: SQLDialect // SQL dialect to use (default: 'sqlite')
+	primaryKey?: string | string[]
+	indexes?: Record<string, string[]>
+	flattenDepth?: number
+	extraColumns?: ExtraColumn[]
+	timestamps?: boolean // Adds created_at and updated_at columns
+}
+
+/**
+ * Creates a SQL DDL statement from a Zod schema
+ */
+export function createTableDDL<T extends ZodRawShape>(
+	tableName: string,
+	schema: ZodObject<T>,
+	options: TableOptions = {}
+): string {
+	const {
+		dialect = 'sqlite',
+		primaryKey,
+		indexes = {},
+		flattenDepth = 2,
+		extraColumns = [],
+		timestamps = false
+	} = options
+	const shape = schema.shape
+	const cols: string[] = []
+	const constraints: string[] = []
+
+	/**
+	 * Helper function to build column definition from ExtraColumn
+	 */
+	function buildColumnDefinition(column: ExtraColumn, dialect: SQLDialect): string {
+		let colDef = `${quoteIdentifier(column.name, dialect)} ${column.type}`
+
+		if (column.notNull) {
+			colDef += ' NOT NULL'
+		}
+
+		if (column.defaultValue !== undefined) {
+			colDef += ` DEFAULT ${column.defaultValue}`
+		}
+
+		if (column.unique) {
+			colDef += ' UNIQUE'
+		}
+
+		if (column.primaryKey) {
+			colDef += ' PRIMARY KEY'
+		}
+
+		if (column.references) {
+			const { table, column: refColumn, onDelete, onUpdate } = column.references
+			colDef += ` REFERENCES ${quoteIdentifier(table, dialect)}(${quoteIdentifier(refColumn, dialect)})`
+
+			if (onDelete) {
+				colDef += ` ON DELETE ${onDelete}`
+			}
+
+			if (onUpdate) {
+				colDef += ` ON UPDATE ${onUpdate}`
+			}
+		}
+
+		return colDef
+	}
+
+	// Prepare columns arrays for different positions
+	const startCols: string[] = []
+	const mainCols: string[] = []
+	const endCols: string[] = []
+
+	// Process extra columns for 'start' position
+	for (const column of extraColumns) {
+		if (column.position === 'start') {
+			startCols.push(buildColumnDefinition(column, dialect))
+		}
+	}
+	
+	// Process each field in the schema
+	for (const [key, type] of Object.entries(shape) as [string, ZodTypeAny][]) {
+		if (type instanceof z.ZodObject && flattenDepth > 0) {
+			// Flatten nested object
+			processNestedObject(key, type, mainCols, flattenDepth, dialect)
+		} else {
+			// Handle primitive types and arrays
+			const sqlType = mapZodToSql(type, dialect)
+			const nullable = isNullable(type) ? '' : ' NOT NULL'
+			
+			// Add PRIMARY KEY directly to the column if it's a single column primary key
+			const isPrimaryKey = primaryKey === key && !Array.isArray(primaryKey)
+			const pkStr = isPrimaryKey ? ' PRIMARY KEY' : ''
+			
+			mainCols.push(`${quoteIdentifier(key, dialect)} ${sqlType}${nullable}${pkStr}`)
+		}
+	}
+
+	// Add timestamp columns if requested
+	if (timestamps) {
+		endCols.push(...getTimestampColumns(dialect))
+	}
+
+	// Process extra columns for 'end' position or unspecified position (default to end)
+	for (const column of extraColumns) {
+		if (!column.position || column.position === 'end') {
+			endCols.push(buildColumnDefinition(column, dialect))
+		}
+	}
+	
+	// Combine all columns in the correct order: start, main, end
+	cols.push(...startCols, ...mainCols, ...endCols)
+
+	// Add compound primary key constraint if specified (and not already set in a column)
+	const hasPrimaryKeyColumn = extraColumns.some(col => col.primaryKey) || 
+							   (primaryKey && !Array.isArray(primaryKey))
+							   
+	if (primaryKey && Array.isArray(primaryKey) && !hasPrimaryKeyColumn) {
+		constraints.push(`PRIMARY KEY (${primaryKey.map((k) => quoteIdentifier(k, dialect)).join(', ')})`)
+	}
+
+	// Generate the CREATE TABLE statement
+	const allDefinitions = [...cols, ...constraints]
+	let sql = `CREATE TABLE IF NOT EXISTS ${quoteIdentifier(tableName, dialect)} (\n  ${allDefinitions.join(',\n  ')}\n);`
+
+	// Add indexes
+	for (const [indexName, columns] of Object.entries(indexes)) {
+		sql += `\nCREATE INDEX IF NOT EXISTS ${quoteIdentifier(indexName, dialect)} ON ${quoteIdentifier(tableName, dialect)} (${columns
+			.map((c) => quoteIdentifier(c, dialect))
+			.join(', ')});`
+	}
+
+	return sql
+}
+
+/**
+ * Process a nested object and flatten it according to the specified depth
+ */
+function processNestedObject(
+	prefix: string,
+	objectType: ZodObject<any>,
+	cols: string[],
+	depth: number,
+	dialect: SQLDialect = 'sqlite'
+): void {
+	if (depth <= 0) {
+		// If max depth reached, store as JSON
+		const sqlType = mapZodToSql(objectType, dialect)
+		const nullable = isNullable(objectType) ? '' : ' NOT NULL'
+		cols.push(`${quoteIdentifier(prefix, dialect)} ${sqlType}${nullable}`)
+		return
+	}
+
+	const shape = objectType.shape
+
+	for (const [nestedKey, nestedType] of Object.entries(shape) as [
+		string,
+		ZodTypeAny
+	][]) {
+		const colName = `${prefix}_${nestedKey}`
+
+		if (nestedType instanceof z.ZodObject && depth > 1) {
+			// Recursively process nested objects
+			processNestedObject(colName, nestedType, cols, depth - 1, dialect)
+		} else {
+			// Add flattened column
+			const sqlType = mapZodToSql(nestedType, dialect)
+			const nullable = isNullable(nestedType) ? '' : ' NOT NULL'
+			cols.push(`${quoteIdentifier(colName, dialect)} ${sqlType}${nullable}`)
+		}
+	}
+}
+
+/**
+ * Creates a SQL DDL statement from a Zod schema and returns the CREATE TABLE and INDEX statements separately
+ */
+export function createTableAndIndexes<T extends ZodRawShape>(
+	tableName: string,
+	schema: ZodObject<T>,
+	options: TableOptions = {}
+): { createTable: string; indexes: string[] } {
+	const {
+		dialect = 'sqlite',
+		primaryKey,
+		indexes = {},
+		flattenDepth = 2,
+		extraColumns = [],
+		timestamps = false
+	} = options
+	
+	// Create the table statement
+	const tableStatement = createTableDDL(tableName, schema, {
+		dialect,
+		primaryKey,
+		flattenDepth,
+		extraColumns,
+		timestamps,
+		// Don't include indexes in the main statement
+		indexes: {}
+	})
+	
+	// Create the index statements separately
+	const indexStatements: string[] = []
+	for (const [indexName, columns] of Object.entries(indexes)) {
+		indexStatements.push(
+			`CREATE INDEX IF NOT EXISTS ${quoteIdentifier(indexName, dialect)} ON ${quoteIdentifier(tableName, dialect)} (${columns
+				.map((c) => quoteIdentifier(c, dialect))
+				.join(', ')});`
+		)
+	}
+	
+	return {
+		createTable: tableStatement,
+		indexes: indexStatements
+	}
+}
+
+/**
+ * EXAMPLE USAGE:
+ *
+ * const UserSchema = z.object({
+ *   id: z.string().uuid(),
+ *   name: z.string(),
+ *   age: z.number().int().optional(),
+ *   email: z.string().email(),
+ *   metadata: z.object({
+ *     lastLogin: z.string().datetime(),
+ *     preferences: z.object({
+ *       theme: z.enum(['light', 'dark']),
+ *       notifications: z.boolean()
+ *     })
+ *   }),
+ *   tags: z.array(z.string())
+ * });
+ *
+ * // SQLite (default)
+ * const sqliteDDL = createTableDDL('users', UserSchema, {
+ *   dialect: 'sqlite', // Optional, this is the default
+ *   primaryKey: 'id',
+ *   indexes: {
+ *     'users_email_idx': ['email'],
+ *     'users_metadata_lastLogin_idx': ['metadata_lastLogin']
+ *   },
+ *   flattenDepth: 2,
+ *   extraColumns: [
+ *     {
+ *       name: 'id_in_other_system',
+ *       type: 'TEXT',
+ *       position: 'start' // This column will appear before schema columns
+ *     },
+ *     {
+ *       name: 'last_login_timestamp',
+ *       type: 'INTEGER',
+ *       notNull: true,
+ *       defaultValue: '0',
+ *       position: 'end' // Explicitly specify end position (this is the default)
+ *     },
+ *     {
+ *       name: 'role_id',
+ *       type: 'INTEGER',
+ *       references: {
+ *         table: 'roles',
+ *         column: 'id',
+ *         onDelete: 'CASCADE'
+ *       }
+ *       // No position specified, defaults to 'end'
+ *     }
+ *   ],
+ *   timestamps: true  // Adds created_at and updated_at columns
+ * });
+ *
+ * // PostgreSQL
+ * const postgresDDL = createTableDDL('users', UserSchema, {
+ *   dialect: 'postgres',
+ *   primaryKey: 'id',
+ *   indexes: {
+ *     'users_email_idx': ['email']
+ *   },
+ *   timestamps: true
+ * });
+ *
+ * // MySQL
+ * const mysqlDDL = createTableDDL('users', UserSchema, {
+ *   dialect: 'mysql',
+ *   primaryKey: 'id',
+ *   timestamps: true
+ * });
+ *
+ * console.log(sqliteDDL);
+ *
+ * // For transaction compatibility, you may want to separate the table and index creation:
+ * const { createTable, indexes } = createTableAndIndexes('users', UserSchema, {
+ *   dialect: 'postgres',
+ *   primaryKey: 'id',
+ *   indexes: {
+ *     'users_email_idx': ['email']
+ *   }
+ * });
+ * console.log(createTable);  // Execute this first
+ * indexes.forEach(idx => console.log(idx));  // Then execute each index separately
+ */

@@ -1,0 +1,22 @@
+{
+	"name": "@datazod/zod-sql",
+	"version": "0.0.1",
+	"private": false,
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"dev": "bun src/index.ts",
+		"build": "bun build src/index.ts --outdir dist && tsc --emitDeclarationOnly --outDir dist",
+		"test": "bun test",
+		"lint": "eslint \"src/**/*.ts\""
+	},
+	"dependencies": {
+		"zod": "^3.25.20"
+	},
+	"publishConfig": {
+		"access": "public"
+	}
+}

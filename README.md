@@ -1,84 +1,85 @@
-# Turborepo starter
+# DataZod
 
-This Turborepo starter is maintained by the Turborepo core team.
+A collection of packages for working with Zod schemas and data. The primary package is `@datazod/zod-sql` which allows you to convert Zod schemas to SQL table definitions.
 
-## Using this example
+## Packages
 
-Run the following command:
+### @datazod/zod-sql
 
-```sh
-npx create-turbo@latest
+A powerful library for converting Zod schemas to SQL table definitions and working with databases in a type-safe way.
+
+```bash
+npm install @datazod/zod-sql
 ```
 
-## What's inside?
+[View Documentation](./packages/zod-sql/README.md)
 
-This Turborepo includes the following packages/apps:
+#### Features
 
-### Apps and Packages
+- Convert Zod schemas to SQL table definitions
+- Support for multiple SQL dialects (SQLite, PostgreSQL, MySQL)
+- Generate type-safe SQL queries
+- Define relationships with foreign keys
+- Control table structure with flexible options
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+#### Basic Usage
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+```typescript
+import { z } from 'zod';
+import { createTableDDL } from '@datazod/zod-sql';
 
-### Utilities
+// Define your schema with Zod
+const UserSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+  email: z.string().email(),
+  isActive: z.boolean().default(true),
+  createdAt: z.date()
+});
 
-This Turborepo has some additional tools already setup for you:
+// Generate SQLite table definition
+const sql = createTableDDL('users', UserSchema, {
+  primaryKey: 'id'
+});
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-pnpm build
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-pnpm dev
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-npx turbo login
+console.log(sql);
+// CREATE TABLE IF NOT EXISTS "users" (
+//   "id" TEXT NOT NULL PRIMARY KEY,
+//   "name" TEXT NOT NULL,
+//   "email" TEXT NOT NULL,
+//   "isActive" BOOLEAN NOT NULL,
+//   "createdAt" TEXT NOT NULL
+// );
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+## Development
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+This is a monorepo using Turborepo and Bun.
 
+### Setup
+
+```bash
+# Install dependencies
+bun install
+
+# Run development server
+bun dev
+
+# Build all packages
+bun build
+
+# Run tests
+bun test
 ```
-npx turbo link
+
+### Creating a changeset
+
+When making changes that need to be released:
+
+```bash
+bun changeset
 ```
 
-## Useful Links
+## License
 
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+MIT

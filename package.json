@@ -6,9 +6,19 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "check-types": "turbo run check-types",
+    "prepare": "husky",
+    "commitlint": "commitlint --edit",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "changeset publish"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.29.4",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "bun-types": "^1.2.14",
+    "husky": "^9.1.7",
     "prettier": "^3.5.3",
     "turbo": "^2.5.3",
     "typescript": "5.8.2"
@@ -20,5 +30,8 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "zod": "^3.25.20"
+  }
 }
