@@ -1,5 +1,11 @@
 # @datazod/zod-sql
 
+## 0.1.3
+
+### Patch Changes
+
+- fix imports
+
 ## 0.1.2
 
 ### Patch Changes
