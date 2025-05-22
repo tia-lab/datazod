@@ -1,6 +1,12 @@
 import type { ZodObject, ZodRawShape, ZodTypeAny } from 'zod'
 import { z } from 'zod'
 import { mapZodToSql } from './maps/index.ts'
+import {
+	extractSchemaType,
+	extractTableSchema,
+	FlattenedSchemaType,
+	TableSchema
+} from './schema/index.ts'
 import type { TableOptions } from './types.ts'
 import {
 	buildColumnDefinition,
@@ -11,6 +17,15 @@ import {
 	processNestedObject,
 	quoteIdentifier
 } from './utils/index.ts'
+
+// Export schema extraction functions
+export type {
+	AutoFieldsType,
+	ColumnDefinition,
+	FlattenedSchemaType,
+	TableSchema
+} from './schema/index.ts'
+export { extractSchemaType, extractTableSchema }
 
 /**
  * Creates a SQL DDL statement from a Zod schema
@@ -151,12 +166,18 @@ export function createTableDDL<T extends ZodRawShape>(
 
 /**
  * Creates a SQL DDL statement from a Zod schema and returns the CREATE TABLE and INDEX statements separately
+ * Also returns schema type information for TypeScript type safety
  */
 export function createTableAndIndexes<T extends ZodRawShape>(
 	tableName: string,
 	schema: ZodObject<T>,
 	options: TableOptions = {}
-): { createTable: string; indexes: string[] } {
+): {
+	createTable: string
+	indexes: string[]
+	schema: z.ZodType<FlattenedSchemaType<T>>
+	tableSchema: TableSchema
+} {
 	const {
 		dialect = 'sqlite',
 		primaryKey,
@@ -189,8 +210,14 @@ export function createTableAndIndexes<T extends ZodRawShape>(
 		)
 	}
 
+	// Extract schema type information
+	const schemaType = extractSchemaType(schema, options)
+	const tableSchema = extractTableSchema(tableName, schema, options)
+
 	return {
 		createTable: tableStatement,
-		indexes: indexStatements
+		indexes: indexStatements,
+		schema: schemaType,
+		tableSchema
 	}
 }
