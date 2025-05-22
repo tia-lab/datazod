@@ -73,7 +73,7 @@ describe('Zod to SQL converter', () => {
 		expect(sql).toContain('"profile_address_city" TEXT NOT NULL')
 
 		// Third level (should be JSON)
-		expect(sql).toContain('"profile_address_country" JSONB NOT NULL')
+		expect(sql).toContain('"profile_address_country" TEXT NOT NULL')
 		expect(sql).not.toContain('"profile_address_country_code"')
 
 		// With depth 3
@@ -89,7 +89,7 @@ describe('Zod to SQL converter', () => {
 		console.log('\n--- Nested Objects SQL (depth=0) ---')
 		console.log(sqlDepth0)
 
-		expect(sqlDepth0).toContain('"profile" JSONB NOT NULL')
+		expect(sqlDepth0).toContain('"profile" TEXT NOT NULL')
 		expect(sqlDepth0).not.toContain('"profile_firstName"')
 	})
 
@@ -104,8 +104,8 @@ describe('Zod to SQL converter', () => {
 		console.log('\n--- Arrays SQL ---')
 		console.log(sql)
 
-		expect(sql).toContain('"tags" JSONB NOT NULL')
-		expect(sql).toContain('"scores" JSONB NOT NULL')
+		expect(sql).toContain('"tags" TEXT NOT NULL')
+		expect(sql).toContain('"scores" TEXT NOT NULL')
 	})
 
 	test('should add indexes', () => {
@@ -321,7 +321,7 @@ describe('Zod to SQL converter', () => {
 		expect(createTable).toContain(
 			'"metadata_preferences_notifications" BOOLEAN NOT NULL'
 		)
-		expect(createTable).toContain('"tags" JSONB NOT NULL')
+		expect(createTable).toContain('"tags" TEXT NOT NULL')
 		expect(createTable).toContain(
 			'"last_login_timestamp" INTEGER NOT NULL DEFAULT 0'
 		)
@@ -713,8 +713,8 @@ describe('Zod to SQL converter', () => {
 			const expectedTypes = {
 				int: dialect === 'mysql' ? 'INT' : 'INTEGER',
 				float: dialect === 'postgres' ? 'DOUBLE PRECISION' : dialect === 'mysql' ? 'DOUBLE' : 'REAL',
-				array: dialect === 'postgres' ? 'JSONB' : dialect === 'mysql' ? 'JSON' : 'JSONB',
-				object: dialect === 'postgres' ? 'JSONB' : dialect === 'mysql' ? 'JSON' : 'JSONB',
+				array: dialect === 'postgres' ? 'JSONB' : dialect === 'mysql' ? 'JSON' : 'TEXT',
+				object: dialect === 'postgres' ? 'JSONB' : dialect === 'mysql' ? 'JSON' : 'TEXT',
 				date: dialect === 'postgres' ? 'TIMESTAMP WITH TIME ZONE' : dialect === 'mysql' ? 'DATETIME' : 'TEXT',
 				uuid: dialect === 'postgres' ? 'UUID' : 'TEXT'
 			};

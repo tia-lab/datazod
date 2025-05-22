@@ -10,10 +10,13 @@ A library for converting Zod schemas to SQL table definitions, helping you work 
 ## Features
 
 - Convert Zod schemas to SQL table definitions
-- Support for multiple SQL dialects (SQLite, PostgreSQL, MySQL)
-- Generate type-safe SQL queries
+- Support for multiple SQL dialects (SQLite/Turso, PostgreSQL, MySQL)
+- Flatten nested objects to any depth
+- Correctly map Zod types to their SQL equivalents
+- Auto-generate UUIDs or auto-incrementing IDs
+- Add timestamp columns (created_at, updated_at)
 - Define relationships with foreign keys
-- Control table structure with flexible options
+- Control column ordering and table structure with flexible options
 - Well-tested with comprehensive test coverage
 
 ## Installation
@@ -119,7 +122,14 @@ const UserSchema = z.object({
 		address: z.object({
 			street: z.string(),
 			city: z.string(),
-			country: z.string()
+			country: z.object({
+				code: z.string(),
+				name: z.string(),
+				details: z.object({
+					continent: z.string(),
+					population: z.number().int()
+				})
+			})
 		})
 	})
 })
@@ -127,17 +137,28 @@ const UserSchema = z.object({
 // Default flattening depth is 2
 const sql = createTableDDL('users', UserSchema, {
 	primaryKey: 'id',
-	// Override default flattening depth
-	flattenDepth: 3
+	// Override default flattening depth to flatten deeply
+	flattenDepth: 5
 })
 
-// Will generate columns:
-// - id
-// - profile_firstName
-// - profile_lastName
-// - profile_address_street
-// - profile_address_city
-// - profile_address_country
+// Will generate flattened columns with proper types:
+// - id TEXT PRIMARY KEY
+// - profile_firstName TEXT
+// - profile_lastName TEXT
+// - profile_address_street TEXT
+// - profile_address_city TEXT
+// - profile_address_country_code TEXT
+// - profile_address_country_name TEXT
+// - profile_address_country_details_continent TEXT
+// - profile_address_country_details_population INTEGER
+
+// With flattenDepth: 0, objects are stored as JSON:
+const noFlattenSql = createTableDDL('users', UserSchema, {
+	primaryKey: 'id',
+	flattenDepth: 0
+})
+// - id TEXT PRIMARY KEY
+// - profile TEXT (stored as JSON)
 ```
 
 ### Extra Columns and Foreign Keys
@@ -188,20 +209,30 @@ const sql = createTableDDL('posts', PostSchema, {
 // Results in:
 // CREATE TABLE IF NOT EXISTS "posts" (
 //   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-//   "title" TEXT NOT NULL,
-//   "content" TEXT NOT NULL,
 //   "created_at" TEXT NOT NULL DEFAULT (datetime('now')),
-//   "updated_at" TEXT NOT NULL DEFAULT (datetime('now'))
+//   "updated_at" TEXT NOT NULL DEFAULT (datetime('now')),
+//   "title" TEXT NOT NULL,
+//   "content" TEXT NOT NULL
 // );
 
-// With UUID as primary key:
+// With UUID as primary key (uses uuid() function in Turso):
 const sqlWithUuid = createTableDDL('posts', PostSchema, {
 	autoId: { 
 		enabled: true, 
-		type: 'uuid' 
+		type: 'uuid',
+		name: 'post_id'  // Custom ID column name (default is 'id')
 	},
 	timestamps: true
 })
+
+// Results in:
+// CREATE TABLE IF NOT EXISTS "posts" (
+//   "post_id" TEXT PRIMARY KEY DEFAULT (uuid()),
+//   "created_at" TEXT NOT NULL DEFAULT (datetime('now')),
+//   "updated_at" TEXT NOT NULL DEFAULT (datetime('now')),
+//   "title" TEXT NOT NULL,
+//   "content" TEXT NOT NULL
+// );
 ```
 
 ### Separate Table and Index Creation
@@ -280,6 +311,18 @@ interface ExtraColumn {
 | `z.array()`             | TEXT    | JSONB                    | JSON     |
 | `z.object()`            | TEXT    | JSONB                    | JSON     |
 | `z.enum()`              | TEXT    | TEXT                     | TEXT     |
+
+## Column Ordering
+
+Columns are arranged in a specific order:
+
+1. **Auto ID Column**: If `autoId` is enabled, it appears first
+2. **Timestamp Columns**: If `timestamps` is enabled, created_at/updated_at appear next
+3. **Start Position Columns**: Extra columns with `position: 'start'`
+4. **Schema Columns**: Fields from your Zod schema
+5. **End Position Columns**: Extra columns with `position: 'end'` or no position specified
+
+This ordering helps maintain a consistent table structure with important fields at the beginning.
 
 ## Performance
 
