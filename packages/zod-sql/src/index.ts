@@ -1,1 +1,1 @@
-export * from './zod-sql/index.ts'
+export * from './zod-sql/index'

@@ -4,11 +4,12 @@
 		"strict": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
-		"module": "ESNext",
-		"moduleResolution": "Bundler",
-		"allowImportingTsExtensions": true,
-		"noEmit": true,
-		"isolatedModules": true
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"declaration": true,
+		"isolatedModules": true,
+		"outDir": "./dist",
+		"rootDir": "."
 	},
 	"include": ["src/**/*", "index.ts"],
 	"exclude": ["node_modules", "**/*.test.ts"]
