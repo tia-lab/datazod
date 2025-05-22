@@ -3,16 +3,10 @@ import type {
 	ZodObject,
 	ZodRawShape,
 	ZodString,
-	ZodTypeAny,
-	ZodBoolean,
-	ZodEnum,
-	ZodDate,
-	ZodArray,
-	ZodNullable,
-	ZodOptional
+	ZodTypeAny
 } from 'zod'
 import { z } from 'zod'
-
+//test
 /**
  * Supported SQL dialects
  */
@@ -195,7 +189,10 @@ function mapZodToMySQL(zodType: ZodTypeAny): string {
 /**
  * Maps a Zod type to its corresponding SQL data type based on the dialect
  */
-function mapZodToSql(zodType: ZodTypeAny, dialect: SQLDialect = 'sqlite'): string {
+function mapZodToSql(
+	zodType: ZodTypeAny,
+	dialect: SQLDialect = 'sqlite'
+): string {
 	switch (dialect) {
 		case 'postgres':
 			return mapZodToPostgres(zodType)
@@ -236,19 +233,25 @@ function getTimestampColumns(dialect: SQLDialect): string[] {
 	switch (dialect) {
 		case 'postgres':
 			return [
-				quoteIdentifier('created_at', dialect) + ' TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()',
-				quoteIdentifier('updated_at', dialect) + ' TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()'
+				quoteIdentifier('created_at', dialect) +
+					' TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()',
+				quoteIdentifier('updated_at', dialect) +
+					' TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()'
 			]
 		case 'mysql':
 			return [
-				quoteIdentifier('created_at', dialect) + ' TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP',
-				quoteIdentifier('updated_at', dialect) + ' TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+				quoteIdentifier('created_at', dialect) +
+					' TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP',
+				quoteIdentifier('updated_at', dialect) +
+					' TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
 			]
 		case 'sqlite':
 		default:
 			return [
-				quoteIdentifier('created_at', dialect) + ' TEXT NOT NULL DEFAULT (datetime(\'now\'))',
-				quoteIdentifier('updated_at', dialect) + ' TEXT NOT NULL DEFAULT (datetime(\'now\'))'
+				quoteIdentifier('created_at', dialect) +
+					" TEXT NOT NULL DEFAULT (datetime('now'))",
+				quoteIdentifier('updated_at', dialect) +
+					" TEXT NOT NULL DEFAULT (datetime('now'))"
 			]
 	}
 }
@@ -312,7 +315,10 @@ export function createTableDDL<T extends ZodRawShape>(
 	/**
 	 * Helper function to build column definition from ExtraColumn
 	 */
-	function buildColumnDefinition(column: ExtraColumn, dialect: SQLDialect): string {
+	function buildColumnDefinition(
+		column: ExtraColumn,
+		dialect: SQLDialect
+	): string {
 		let colDef = `${quoteIdentifier(column.name, dialect)} ${column.type}`
 
 		if (column.notNull) {
@@ -358,7 +364,7 @@ export function createTableDDL<T extends ZodRawShape>(
 			startCols.push(buildColumnDefinition(column, dialect))
 		}
 	}
-	
+
 	// Process each field in the schema
 	for (const [key, type] of Object.entries(shape) as [string, ZodTypeAny][]) {
 		if (type instanceof z.ZodObject && flattenDepth > 0) {
@@ -368,12 +374,14 @@ export function createTableDDL<T extends ZodRawShape>(
 			// Handle primitive types and arrays
 			const sqlType = mapZodToSql(type, dialect)
 			const nullable = isNullable(type) ? '' : ' NOT NULL'
-			
+
 			// Add PRIMARY KEY directly to the column if it's a single column primary key
 			const isPrimaryKey = primaryKey === key && !Array.isArray(primaryKey)
 			const pkStr = isPrimaryKey ? ' PRIMARY KEY' : ''
-			
-			mainCols.push(`${quoteIdentifier(key, dialect)} ${sqlType}${nullable}${pkStr}`)
+
+			mainCols.push(
+				`${quoteIdentifier(key, dialect)} ${sqlType}${nullable}${pkStr}`
+			)
 		}
 	}
 
@@ -388,16 +396,19 @@ export function createTableDDL<T extends ZodRawShape>(
 			endCols.push(buildColumnDefinition(column, dialect))
 		}
 	}
-	
+
 	// Combine all columns in the correct order: start, main, end
 	cols.push(...startCols, ...mainCols, ...endCols)
 
 	// Add compound primary key constraint if specified (and not already set in a column)
-	const hasPrimaryKeyColumn = extraColumns.some(col => col.primaryKey) || 
-							   (primaryKey && !Array.isArray(primaryKey))
-							   
+	const hasPrimaryKeyColumn =
+		extraColumns.some((col) => col.primaryKey) ||
+		(primaryKey && !Array.isArray(primaryKey))
+
 	if (primaryKey && Array.isArray(primaryKey) && !hasPrimaryKeyColumn) {
-		constraints.push(`PRIMARY KEY (${primaryKey.map((k) => quoteIdentifier(k, dialect)).join(', ')})`)
+		constraints.push(
+			`PRIMARY KEY (${primaryKey.map((k) => quoteIdentifier(k, dialect)).join(', ')})`
+		)
 	}
 
 	// Generate the CREATE TABLE statement
@@ -468,7 +479,7 @@ export function createTableAndIndexes<T extends ZodRawShape>(
 		extraColumns = [],
 		timestamps = false
 	} = options
-	
+
 	// Create the table statement
 	const tableStatement = createTableDDL(tableName, schema, {
 		dialect,
@@ -479,7 +490,7 @@ export function createTableAndIndexes<T extends ZodRawShape>(
 		// Don't include indexes in the main statement
 		indexes: {}
 	})
-	
+
 	// Create the index statements separately
 	const indexStatements: string[] = []
 	for (const [indexName, columns] of Object.entries(indexes)) {
@@ -489,7 +500,7 @@ export function createTableAndIndexes<T extends ZodRawShape>(
 				.join(', ')});`
 		)
 	}
-	
+
 	return {
 		createTable: tableStatement,
 		indexes: indexStatements
