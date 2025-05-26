@@ -1,5 +1,11 @@
 # @datazod/zod-sql
 
+## 0.2.1
+
+### Patch Changes
+
+- Fixed imports of shared package
+
 ## 0.2.0
 
 ### Minor Changes

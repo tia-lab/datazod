@@ -1,6 +1,6 @@
 {
 	"name": "@datazod/zod-pinecone",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"private": false,
 	"description": "Bridge Turso/SQLite databases with Pinecone vector search using type-safe schemas and hybrid query capabilities",
 	"author": {
