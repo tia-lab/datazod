@@ -1,0 +1,13 @@
+# @datazod/zod-pinecone
+
+## 0.0.1
+
+### Patch Changes
+
+- Initial release of zod-pinecone package
+- Bridge Turso/SQLite databases with Pinecone vector search
+- Type-safe schema integration with hybrid query capabilities
+- Turso-Pinecone adapter for seamless data synchronization
+- Vector embedding management and metadata sync
+- Batch processing for efficient bulk operations
+- Full TypeScript support with comprehensive type definitions

@@ -1,8 +1,8 @@
 {
-	"name": "@datazod/zod-sql",
-	"version": "0.1.4",
+	"name": "@datazod/zod-pinecone",
+	"version": "0.0.1",
 	"private": false,
-	"description": "Convert Zod schemas to SQL table definitions with support for SQLite, PostgreSQL, and MySQL",
+	"description": "Bridge Turso/SQLite databases with Pinecone vector search using type-safe schemas and hybrid query capabilities",
 	"author": {
 		"name": "Tia-Lab",
 		"url": "https://github.com/tia-lab"
@@ -10,18 +10,21 @@
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/tia-lab/datazod.git",
-		"directory": "packages/zod-sql"
+		"directory": "packages/zod-pinecone"
 	},
-	"homepage": "https://github.com/tia-lab/datazod/tree/main/packages/zod-sql",
+	"homepage": "https://github.com/tia-lab/datazod/tree/main/packages/zod-pinecone",
 	"keywords": [
 		"zod",
-		"sql",
+		"pinecone",
+		"turso",
 		"sqlite",
-		"postgres",
-		"mysql",
-		"schema",
+		"vector",
+		"search",
+		"embedding",
+		"ai",
 		"typescript",
-		"database"
+		"database",
+		"hybrid-search"
 	],
 	"type": "module",
 	"main": "./dist/index.js",
@@ -45,12 +48,16 @@
 		"check-types": "tsc --noEmit"
 	},
 	"peerDependencies": {
+		"@libsql/client": ">=0.4.0",
+		"@pinecone-database/pinecone": ">=1.0.0",
 		"zod": "^3.x"
 	},
 	"dependencies": {
 		"@repo/shared": "workspace:*"
 	},
 	"devDependencies": {
+		"@libsql/client": "^0.14.0",
+		"@pinecone-database/pinecone": "^3.0.3",
 		"zod": "^3.25.20"
 	},
 	"publishConfig": {

@@ -1,0 +1,16 @@
+{
+	"extends": "@repo/typescript-config/base.json",
+	"compilerOptions": {
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"declaration": true,
+		"isolatedModules": true,
+		"outDir": "./dist",
+		"rootDir": "."
+	},
+	"include": ["**/*.ts"],
+	"exclude": ["node_modules", "dist", "**/*.test.ts"]
+}
