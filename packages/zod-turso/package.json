@@ -51,7 +51,7 @@
 		"zod": "^3.x"
 	},
 	"dependencies": {
-		"@datazod/shared": "workspace:*",
+		"@datazod/shared": "^0.1.2",
 		"uuid": "^10.0.0"
 	},
 	"devDependencies": {

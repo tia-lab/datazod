@@ -53,7 +53,7 @@
 		"zod": "^3.x"
 	},
 	"dependencies": {
-		"@datazod/shared": "workspace:*"
+		"@datazod/shared": "^0.1.2"
 	},
 	"devDependencies": {
 		"@libsql/client": "^0.14.0",
