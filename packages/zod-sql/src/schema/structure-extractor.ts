@@ -7,7 +7,7 @@ import {
 	shouldFlattenType,
 	isInteger,
 	mapTypeToSql
-} from '@repo/shared'
+} from '@datazod/shared'
 
 /**
  * Extracts table structure metadata from Zod schema

@@ -1,6 +1,6 @@
 import { ZodObject, ZodRawShape, z } from 'zod'
 import { TursoClient } from '../types'
-import { flattenZodToObject } from '@repo/shared'
+import { flattenZodToObject } from '@datazod/shared'
 import { ResultSet } from '@libsql/client'
 
 export interface QueryOptions {

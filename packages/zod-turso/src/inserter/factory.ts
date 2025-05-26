@@ -6,7 +6,7 @@ import type {
 	InsertResult,
 	BatchInsertResult
 } from '../types'
-import { flattenZodToObject } from '@repo/shared'
+import { flattenZodToObject } from '@datazod/shared'
 import { flattenForInsert } from '../helpers'
 import { insertSingle } from './single'
 import { insertBatch } from './batch'

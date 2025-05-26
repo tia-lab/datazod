@@ -1,4 +1,4 @@
-import type { ExtendedOptions, ColumnDefinition } from '@repo/shared'
+import type { ExtendedOptions, ColumnDefinition } from '@datazod/shared'
 
 /**
  * SQL-specific table options

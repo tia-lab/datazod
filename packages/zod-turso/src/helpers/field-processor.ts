@@ -3,7 +3,7 @@ import {
 	generateAutoIdConfig,
 	generateTimestampValues,
 	updateTimestamp
-} from '@repo/shared'
+} from '@datazod/shared'
 import { v4 as uuidv4 } from 'uuid'
 
 /**
