@@ -1,4 +1,4 @@
-import type { ExtendedOptions } from '@repo/shared'
+import type { ExtendedOptions } from '@datazod/shared'
 
 /**
  * Turso-specific inserter options

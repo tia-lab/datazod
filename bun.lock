@@ -35,8 +35,8 @@
       },
     },
     "packages/shared": {
-      "name": "@repo/shared",
-      "version": "0.0.1",
+      "name": "@datazod/shared",
+      "version": "0.1.1",
       "devDependencies": {
         "zod": "^3.25.20",
       },
@@ -50,9 +50,9 @@
     },
     "packages/zod-pinecone": {
       "name": "@datazod/zod-pinecone",
-      "version": "0.0.1",
+      "version": "0.1.3",
       "dependencies": {
-        "@repo/shared": "workspace:*",
+        "@datazod/shared": "workspace:*",
       },
       "devDependencies": {
         "@libsql/client": "^0.14.0",
@@ -67,9 +67,9 @@
     },
     "packages/zod-sql": {
       "name": "@datazod/zod-sql",
-      "version": "0.1.4",
+      "version": "0.2.3",
       "dependencies": {
-        "@repo/shared": "workspace:*",
+        "@datazod/shared": "workspace:*",
       },
       "devDependencies": {
         "zod": "^3.25.20",
@@ -80,9 +80,9 @@
     },
     "packages/zod-turso": {
       "name": "@datazod/zod-turso",
-      "version": "0.0.1",
+      "version": "0.1.3",
       "dependencies": {
-        "@repo/shared": "workspace:*",
+        "@datazod/shared": "workspace:*",
         "uuid": "^10.0.0",
       },
       "devDependencies": {
@@ -171,6 +171,8 @@
 
     "@commitlint/types": ["@commitlint/types@19.8.1", "", { "dependencies": { "@types/conventional-commits-parser": "^5.0.0", "chalk": "^5.3.0" } }, "sha512-/yCrWGCoA1SVKOks25EGadP9Pnj0oAIHGpl2wH2M2Y46dPM2ueb8wyCVOD7O3WCTkaJ0IkKvzhl1JY7+uCT2Dw=="],
 
+    "@datazod/shared": ["@datazod/shared@workspace:packages/shared"],
+
     "@datazod/zod-pinecone": ["@datazod/zod-pinecone@workspace:packages/zod-pinecone"],
 
     "@datazod/zod-sql": ["@datazod/zod-sql@workspace:packages/zod-sql"],
@@ -244,8 +246,6 @@
     "@pinecone-database/pinecone": ["@pinecone-database/pinecone@3.0.3", "", { "dependencies": { "encoding": "^0.1.13" } }, "sha512-0cAG0d/6knVZgVyXM1II4qG3dyOepLuAQsCXTOJomdA7iQxf+/Om9mq9Cw4QObr56oZ+lqtptlw5qz0BQaBX2Q=="],
 
     "@repo/eslint-config": ["@repo/eslint-config@workspace:packages/eslint-config"],
-
-    "@repo/shared": ["@repo/shared@workspace:packages/shared"],
 
     "@repo/typescript-config": ["@repo/typescript-config@workspace:packages/typescript-config"],
 

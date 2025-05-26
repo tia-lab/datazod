@@ -1,6 +1,6 @@
 import type { ZodObject, ZodRawShape } from 'zod'
 import type { TableOptions } from '../types'
-import { flattenZodToObject } from '@repo/shared'
+import { flattenZodToObject } from '@datazod/shared'
 
 /**
  * Creates a flattened schema JSON representation for type inference

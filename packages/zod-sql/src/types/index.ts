@@ -13,4 +13,4 @@ export type {
 	AutoIdConfig,
 	ExtraColumn,
 	ColumnDefinition
-} from '@repo/shared'
+} from '@datazod/shared'

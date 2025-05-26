@@ -25,4 +25,4 @@ export type {
 	ExtraColumn,
 	BaseOptions,
 	ExtendedOptions
-} from '@repo/shared'
+} from '@datazod/shared'
