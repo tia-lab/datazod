@@ -47,6 +47,9 @@
 	"peerDependencies": {
 		"zod": "^3.x"
 	},
+	"dependencies": {
+		"@repo/shared": "workspace:*"
+	},
 	"devDependencies": {
 		"zod": "^3.25.20"
 	},
