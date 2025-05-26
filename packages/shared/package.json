@@ -1,8 +1,25 @@
 {
-	"name": "@repo/shared",
-	"version": "0.0.1",
-	"private": true,
-	"description": "Internal shared utilities for datazod packages",
+	"name": "@datazod/shared",
+	"version": "0.1.0",
+	"private": false,
+	"description": "Shared utilities for datazod packages",
+	"author": {
+		"name": "Tia-Lab",
+		"url": "https://github.com/tia-lab"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/tia-lab/datazod.git",
+		"directory": "packages/shared"
+	},
+	"homepage": "https://github.com/tia-lab/datazod/tree/main/packages/shared",
+	"keywords": [
+		"zod",
+		"utilities",
+		"typescript",
+		"schema",
+		"validation"
+	],
 	"type": "module",
 	"main": "./dist/index.js",
 	"module": "./dist/index.js",
@@ -28,6 +45,9 @@
 	},
 	"devDependencies": {
 		"zod": "^3.25.20"
+	},
+	"publishConfig": {
+		"access": "public"
 	},
 	"license": "MIT"
 }
