@@ -1,5 +1,13 @@
 # @datazod/zod-sql
 
+## 0.2.4
+
+### Patch Changes
+
+- uniform imports
+- Updated dependencies
+  - @datazod/shared@0.1.2
+
 ## 0.2.3
 
 ### Patch Changes
