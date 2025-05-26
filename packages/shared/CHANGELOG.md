@@ -1,5 +1,11 @@
 # @datazod/shared
 
+## 0.1.3
+
+### Patch Changes
+
+- fix: imports for dev and prod shared deps
+
 ## 0.1.2
 
 ### Patch Changes

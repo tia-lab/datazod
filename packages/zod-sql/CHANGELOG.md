@@ -1,5 +1,13 @@
 # @datazod/zod-sql
 
+## 0.2.5
+
+### Patch Changes
+
+- fix: imports for dev and prod shared deps
+- Updated dependencies
+  - @datazod/shared@0.1.3
+
 ## 0.2.4
 
 ### Patch Changes

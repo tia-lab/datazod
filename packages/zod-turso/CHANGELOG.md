@@ -1,5 +1,13 @@
 # @datazod/zod-turso
 
+## 0.1.5
+
+### Patch Changes
+
+- fix: imports for dev and prod shared deps
+- Updated dependencies
+  - @datazod/shared@0.1.3
+
 ## 0.1.4
 
 ### Patch Changes
