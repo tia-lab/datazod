@@ -1,5 +1,11 @@
 # @datazod/zod-sql
 
+## 0.2.0
+
+### Minor Changes
+
+- Update features of zod-sql, relase of zod-pinecon and zod-turso
+
 ## 0.1.4
 
 ### Patch Changes
