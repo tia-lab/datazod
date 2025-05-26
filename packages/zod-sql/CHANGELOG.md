@@ -1,5 +1,11 @@
 # @datazod/zod-sql
 
+## 0.2.3
+
+### Patch Changes
+
+- update package.json files for shared utilities and add dependencies in zod packages
+
 ## 0.2.2
 
 ### Patch Changes

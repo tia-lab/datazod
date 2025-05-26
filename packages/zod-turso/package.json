@@ -1,6 +1,6 @@
 {
 	"name": "@datazod/zod-turso",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"private": false,
 	"description": "A type-safe Turso/SQLite ORM with Zod schema integration, offering data flattening, batch operations, and query building capabilities",
 	"author": {

@@ -1,5 +1,11 @@
 # @datazod/zod-pinecone
 
+## 0.1.3
+
+### Patch Changes
+
+- update package.json files for shared utilities and add dependencies in zod packages
+
 ## 0.1.2
 
 ### Patch Changes
