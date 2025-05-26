@@ -5,68 +5,19 @@ A library for converting Zod schemas to SQL table definitions, helping you work 
 [![NPM Version](https://img.shields.io/npm/v/@datazod/zod-sql.svg)](https://www.npmjs.com/package/@datazod/zod-sql)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Experimental Status
-
-This package is currently in **experimental status**. While I strive for stability and have comprehensive tests, the API may change in future versions as I continue to improve and add features based on community feedback.
-
-## Related Packages
-
-This package is part of the **@datazod** ecosystem, which includes complementary tools for working with Zod schemas and databases:
-
-- **[@datazod/zod-turso](https://www.npmjs.com/package/@datazod/zod-turso)** - A type-safe Turso/SQLite ORM with data flattening, batch operations, and query building capabilities
-- **[@datazod/zod-pinecone](https://www.npmjs.com/package/@datazod/zod-pinecone)** - A bridge between Turso/SQLite databases and Pinecone vector search for AI applications
-
-Together, these packages provide a complete solution for schema-driven database design, data operations, and vector search integration.
-
-## Contributing
-
-Contributions are **really welcome**! As a solo developer, I'm actively looking for help to make this package better. Whether you want to:
-
-- Report bugs or issues
-- Suggest new features
-- Improve documentation
-- Add support for more SQL dialects
-- Optimize performance
-- Write more tests
-
-Please feel free to:
-
-- Open issues on [GitHub](https://github.com/tia-lab/datazod/issues)
-- Submit pull requests
-- Share your use cases and feedback
-
-Every contribution, no matter how small, helps make this package better for everyone.
-
-## Thanks
-
-Special thanks to all contributors and users who have provided feedback, reported issues, and helped improve this package. Your input is invaluable in making @datazod/zod-sql better!
-
 > **Note:** This package is optimized for [Bun](https://bun.sh) but works with any JavaScript runtime.
 
 ## Features
 
-### Core Functionality
-
-- **Convert Zod schemas to SQL table definitions** - Generate CREATE TABLE statements from your Zod schemas
-- **Multi-dialect support** - SQLite/Turso, PostgreSQL, and MySQL with dialect-specific optimizations
-- **Intelligent type mapping** - Correctly map Zod types to their SQL equivalents with proper constraints
-- **Nested object flattening** - Flatten nested objects to any depth with configurable strategies
-
-### Advanced Features
-
-- **Auto-generated fields** - Auto-incrementing IDs, UUIDs, timestamps (created_at, updated_at)
-- **Flexible column control** - Control column ordering, add extra columns, define foreign keys
-- **Index generation** - Create single and compound indexes with proper naming
-- **Primary key support** - Single column or compound primary keys
-- **Nullable/Optional handling** - Proper NOT NULL constraints based on Zod schema
-
-### New Enhanced Capabilities
-
-- **Pre-built schema utilities** - `timeStampsSchema`, `autoIdSchema`, `autoIdSchemaWithTimestamps` for common patterns
-- **JSON schema generation** - `createFlattenedSchemaJson()` for schema introspection and tooling
-- **Advanced type inference** - `TableTypes<T>` for TypeScript type-level flattening of interfaces
-- **Enhanced structure extraction** - `extractTableStructure()` for programmatic schema analysis
-- **Comprehensive testing** - Well-tested with extensive test coverage using Bun's native test runner
+- Convert Zod schemas to SQL table definitions
+- Support for multiple SQL dialects (SQLite/Turso, PostgreSQL, MySQL)
+- Flatten nested objects to any depth
+- Correctly map Zod types to their SQL equivalents
+- Auto-generate UUIDs or auto-incrementing IDs
+- Add timestamp columns (created_at, updated_at)
+- Define relationships with foreign keys
+- Control column ordering and table structure with flexible options
+- Well-tested with comprehensive test coverage
 
 ## Installation
 
@@ -88,14 +39,7 @@ pnpm add @datazod/zod-sql
 
 ```typescript
 import { z } from 'zod'
-import {
-	createTableDDL,
-	createTable,
-	createFlattenedSchemaJson,
-	timeStampsSchema,
-	autoIdSchema,
-	autoIdSchemaWithTimestamps
-} from '@datazod/zod-sql'
+import { createTableDDL, createTable } from '@datazod/zod-sql'
 
 // Define your schema with Zod
 const UserSchema = z.object({
@@ -140,92 +84,7 @@ const { table, indexes, schema, structure } = createTable('users', UserSchema, {
 })
 
 // Use the schema type for validation and type inference
-type User = z.infer<typeof schema>
-```
-
-## New Schema Utilities
-
-### Pre-built Schemas
-
-```typescript
-import { z } from 'zod'
-import {
-	timeStampsSchema,
-	autoIdSchema,
-	autoIdSchemaWithTimestamps
-} from '@datazod/zod-sql'
-
-// Use pre-built schemas for common patterns
-const UserSchema = z
-	.object({
-		name: z.string(),
-		email: z.string().email()
-	})
-	.merge(autoIdSchemaWithTimestamps)
-
-// Or build your own combinations
-const PostSchema = z
-	.object({
-		title: z.string(),
-		content: z.string()
-	})
-	.merge(timeStampsSchema)
-
-// Generate SQL with these merged schemas
-const sql = createTableDDL('users', UserSchema, { dialect: 'postgres' })
-// Automatically includes id, created_at, updated_at columns
-```
-
-### JSON Schema Generation
-
-```typescript
-import { createFlattenedSchemaJson } from '@datazod/zod-sql'
-
-const NestedSchema = z.object({
-	user: z.object({
-		profile: z.object({
-			name: z.string(),
-			age: z.number()
-		})
-	}),
-	active: z.boolean()
-})
-
-// Generate flattened JSON representation
-const flatJson = createFlattenedSchemaJson(NestedSchema, { flattenDepth: 2 })
-console.log(flatJson)
-// {
-//   user_profile_name: "string",
-//   user_profile_age: "number",
-//   active: "boolean"
-// }
-```
-
-### Advanced Type Inference
-
-```typescript
-import type { TableTypes } from '@datazod/zod-sql'
-
-// Advanced flattening types for complex interfaces
-type MyInterface = {
-	user: {
-		name: string
-		profile: {
-			bio: string
-			age: number
-		}
-	}
-	active: boolean
-}
-
-// TableTypes automatically flattens nested structures
-type FlattenedTable = TableTypes<MyInterface>
-// Result: {
-//   user_name: string
-//   user_profile_bio: string
-//   user_profile_age: number
-//   active: boolean
-// }
+type User = z.infer<typeof schema>;
 ```
 
 ## Advanced Features
@@ -353,8 +212,8 @@ const PostSchema = z.object({
 })
 
 const sql = createTableDDL('posts', PostSchema, {
-	autoId: true, // Adds an auto-incrementing primary key 'id' column
-	timestamps: true // Adds created_at and updated_at columns
+	autoId: true,        // Adds an auto-incrementing primary key 'id' column
+	timestamps: true     // Adds created_at and updated_at columns
 })
 
 // Results in:
@@ -368,10 +227,10 @@ const sql = createTableDDL('posts', PostSchema, {
 
 // With UUID as primary key (uses uuid() function in Turso):
 const sqlWithUuid = createTableDDL('posts', PostSchema, {
-	autoId: {
-		enabled: true,
+	autoId: { 
+		enabled: true, 
 		type: 'uuid',
-		name: 'post_id' // Custom ID column name (default is 'id')
+		name: 'post_id'  // Custom ID column name (default is 'id')
 	},
 	timestamps: true
 })
@@ -407,13 +266,13 @@ indexes.forEach((idx) => console.log(idx)) // Then execute each index
 
 // You can also use the schema for validation
 const userData = {
-	id: 'f8c3de3d-1fea-4d7c-a8b0-29f63c4c3454',
-	name: 'John Doe',
-	email: 'john@example.com'
-}
+  id: 'f8c3de3d-1fea-4d7c-a8b0-29f63c4c3454',
+  name: 'John Doe',
+  email: 'john@example.com'
+};
 
 // Validates the data against the schema
-const validUser = schema.parse(userData)
+const validUser = schema.parse(userData);
 ```
 
 ### Type-Safe Data Handling
@@ -421,42 +280,40 @@ const validUser = schema.parse(userData)
 One of the key benefits of @datazod/zod-sql is the ability to get TypeScript types that match your database schema:
 
 ```typescript
-import { z } from 'zod'
-import { createTable } from '@datazod/zod-sql'
+import { z } from 'zod';
+import { createTable } from '@datazod/zod-sql';
 
 // Define your schema
 const ProductSchema = z.object({
-	name: z.string(),
-	price: z.number().positive(),
-	description: z.string().optional(),
-	categories: z.array(z.string())
-})
+  name: z.string(),
+  price: z.number().positive(),
+  description: z.string().optional(),
+  categories: z.array(z.string())
+});
 
 // Generate SQL and get the table schema
 const { table, schema, structure } = createTable('products', ProductSchema, {
-	autoId: true,
-	timestamps: true
-})
+  autoId: true,
+  timestamps: true
+});
 
 // Get TypeScript type for your table rows
-type Product = z.infer<typeof schema>
+type Product = z.infer<typeof schema>;
 
 // Now you can use this type with your database operations
-function insertProduct(
-	product: Omit<Product, 'id' | 'created_at' | 'updated_at'>
-) {
-	// These fields will be auto-generated
-	console.log(`Inserting: ${product.name}`)
-	// In a real app: db.insert('products', product);
+function insertProduct(product: Omit<Product, 'id' | 'created_at' | 'updated_at'>) {
+  // These fields will be auto-generated
+  console.log(`Inserting: ${product.name}`);
+  // In a real app: db.insert('products', product);
 }
 
 // Correctly typed - TypeScript knows about all fields including nested structures
 insertProduct({
-	name: 'Laptop',
-	price: 999.99,
-	description: 'Powerful laptop',
-	categories: ['electronics', 'computers']
-})
+  name: 'Laptop',
+  price: 999.99,
+  description: 'Powerful laptop',
+  categories: ['electronics', 'computers']
+});
 ```
 
 ## API Reference
@@ -542,19 +399,19 @@ One of the key features of this package is its ability to provide TypeScript typ
 When you call `createTable()`, you get an object with these properties:
 
 ```typescript
-const {
-	table, // SQL DDL statement for creating the table
-	indexes, // Array of SQL statements for creating indexes
-	schema, // Zod schema for validating data against the table structure
-	structure // Detailed information about table columns and properties
-} = createTable('users', UserSchema, options)
+const { 
+  table,      // SQL DDL statement for creating the table
+  indexes,    // Array of SQL statements for creating indexes
+  schema,     // Zod schema for validating data against the table structure
+  structure   // Detailed information about table columns and properties
+} = createTable('users', UserSchema, options);
 ```
 
 ### Using the Schema for Type Safety
 
 ```typescript
 // Get the TypeScript type for your table rows
-type User = z.infer<typeof schema>
+type User = z.infer<typeof schema>;
 
 // This type includes all columns in your table:
 // - Original fields from your schema
@@ -569,19 +426,16 @@ The `structure` property gives you programmatic access to column information:
 
 ```typescript
 // Inspect column details
-structure.columns.forEach((column) => {
-	console.log(
-		`${column.name}: ${column.type} ${column.nullable ? 'NULL' : 'NOT NULL'}`
-	)
-})
+structure.columns.forEach(column => {
+  console.log(`${column.name}: ${column.type} ${column.nullable ? 'NULL' : 'NOT NULL'}`);
+});
 
 // Generate dynamic queries
 function buildSelectQuery(fields: string[] = []) {
-	const columns =
-		fields.length > 0
-			? fields.join(', ')
-			: structure.columns.map((c) => c.name).join(', ')
-	return `SELECT ${columns} FROM ${structure.tableName}`
+  const columns = fields.length > 0 
+    ? fields.join(', ') 
+    : structure.columns.map(c => c.name).join(', ');
+  return `SELECT ${columns} FROM ${structure.tableName}`;
 }
 ```
 

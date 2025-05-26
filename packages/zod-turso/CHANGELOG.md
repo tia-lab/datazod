@@ -1,0 +1,14 @@
+# @datazod/zod-turso
+
+## 0.0.1
+
+### Patch Changes
+
+- Initial release of zod-turso package
+- Type-safe Turso/SQLite ORM with Zod schema integration
+- Advanced data flattening for nested objects
+- Batch insert operations with progress tracking
+- Query builder with fluent API
+- Auto field generation (IDs, timestamps)
+- Connection and validation helpers
+- Full TypeScript support with comprehensive type definitions

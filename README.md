@@ -1,59 +1,188 @@
 # DataZod
 
-A collection of packages for working with Zod schemas and data. The primary package is `@datazod/zod-sql` which allows you to convert Zod schemas to SQL table definitions.
+A comprehensive ecosystem of packages for working with Zod schemas, databases, and vector search. These packages work together to provide a complete solution for schema-driven development, from table creation to data operations and AI-enabled search.
 
-## Packages
+## Packages Overview
 
-### @datazod/zod-sql
+### [@datazod/zod-sql](./packages/zod-sql)
+[![NPM Version](https://img.shields.io/npm/v/@datazod/zod-sql.svg)](https://www.npmjs.com/package/@datazod/zod-sql)
 
-A powerful library for converting Zod schemas to SQL table definitions and working with databases in a type-safe way.
+Convert Zod schemas to SQL table definitions with multi-dialect support and intelligent type mapping.
 
 ```bash
 npm install @datazod/zod-sql
 ```
 
-[View Documentation](./packages/zod-sql/README.md)
+**Key Features:**
+- Multi-dialect support (SQLite/Turso, PostgreSQL, MySQL)
+- Intelligent nested object flattening
+- Auto-generated fields (IDs, timestamps)
+- Foreign key relationships and indexes
+- Type-safe schema inference
 
-#### Features
+### [@datazod/zod-turso](./packages/zod-turso)
+[![NPM Version](https://img.shields.io/npm/v/@datazod/zod-turso.svg)](https://www.npmjs.com/package/@datazod/zod-turso)
 
-- Convert Zod schemas to SQL table definitions
-- Support for multiple SQL dialects (SQLite/Turso, PostgreSQL, MySQL)
-- Flatten nested objects to any depth
-- Correctly map Zod types to their SQL equivalents
-- Auto-generate UUIDs or auto-incrementing IDs
-- Add timestamp columns (created_at, updated_at)
-- Define relationships with foreign keys
-- Control column ordering and table structure with flexible options
+A type-safe Turso/SQLite ORM with data flattening, batch operations, and query building capabilities.
 
-#### Basic Usage
+```bash
+npm install @datazod/zod-turso @libsql/client zod
+```
+
+**Key Features:**
+- Type-safe database operations
+- Data flattening for nested objects
+- Batch processing with progress tracking
+- Fluent query builder API
+- Auto field generation
+
+### [@datazod/zod-pinecone](./packages/zod-pinecone)
+[![NPM Version](https://img.shields.io/npm/v/@datazod/zod-pinecone.svg)](https://www.npmjs.com/package/@datazod/zod-pinecone)
+
+Bridge between Turso/SQLite databases and Pinecone vector search for AI-enabled applications.
+
+```bash
+npm install @datazod/zod-pinecone @pinecone-database/pinecone @libsql/client zod
+```
+
+**Key Features:**
+- Seamless Turso ↔ Pinecone synchronization
+- Configurable embedding generation
+- Metadata field mapping
+- Batch operations for large datasets
+- Type-safe vector operations
+
+## Complete Workflow Example
+
+Here's how these packages work together to create a complete data solution:
+
+### 1. Define Your Schema
 
 ```typescript
-import { z } from 'zod';
-import { createTableDDL } from '@datazod/zod-sql';
+import { z } from 'zod'
 
-// Define your schema with Zod
-const UserSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string().min(1),
-  email: z.string().email(),
-  isActive: z.boolean().default(true),
-  createdAt: z.date()
-});
-
-// Generate SQLite table definition
-const sql = createTableDDL('users', UserSchema, {
-  primaryKey: 'id'
-});
-
-console.log(sql);
-// CREATE TABLE IF NOT EXISTS "users" (
-//   "id" TEXT NOT NULL PRIMARY KEY,
-//   "name" TEXT NOT NULL,
-//   "email" TEXT NOT NULL,
-//   "isActive" BOOLEAN NOT NULL,
-//   "createdAt" TEXT NOT NULL
-// );
+const ProductSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  price: z.number(),
+  category: z.object({
+    name: z.string(),
+    slug: z.string()
+  }),
+  features: z.array(z.string()),
+  metadata: z.record(z.any())
+})
 ```
+
+### 2. Create Database Tables
+
+```typescript
+import { createTableDDL } from '@datazod/zod-sql'
+
+// Generate SQL table definition
+const tableSQL = createTableDDL('products', ProductSchema, {
+  dialect: 'sqlite',
+  autoId: true,
+  timestamps: true,
+  flattenDepth: 2
+})
+
+console.log(tableSQL)
+// Creates table with flattened columns:
+// id, created_at, updated_at, name, description, price, 
+// category_name, category_slug, features, metadata
+```
+
+### 3. Insert and Query Data
+
+```typescript
+import { createTursoInserter, createTursoQuery } from '@datazod/zod-turso'
+import { createClient } from '@libsql/client'
+
+const client = createClient({ url: 'your-turso-url', authToken: 'token' })
+const inserter = createTursoInserter('products', ProductSchema, {
+  autoId: { type: 'uuid' },
+  timestamps: true
+})
+
+// Insert product data
+const result = await inserter.insert(client, {
+  name: 'Gaming Laptop',
+  description: 'High-performance laptop for gaming',
+  price: 1299.99,
+  category: { name: 'Electronics', slug: 'electronics' },
+  features: ['16GB RAM', 'RTX 4060', 'SSD'],
+  metadata: { brand: 'TechCorp', warranty: '2 years' }
+})
+
+// Query products
+const queryBuilder = createTursoQuery('products', ProductSchema)
+const products = await queryBuilder
+  .selectAll()
+  .where('category_name', '=', 'Electronics')
+  .where('price', '<', 1500)
+  .orderBy('price', 'ASC')
+  .all(client)
+```
+
+### 4. Enable Vector Search
+
+```typescript
+import { createTursoPineconeAdapter } from '@datazod/zod-pinecone'
+import { Pinecone } from '@pinecone-database/pinecone'
+
+const pinecone = new Pinecone({ apiKey: 'your-api-key' })
+
+const adapter = createTursoPineconeAdapter({
+  indexName: 'products',
+  generateEmbedding: async (text) => {
+    // Your embedding generation logic
+    return await openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: text
+    })
+  },
+  embeddingFields: ['name', 'description'],
+  metadataFields: ['category_name', 'price']
+})
+
+// Sync data to Pinecone for vector search
+await adapter.upsertFromTurso(
+  client,
+  pinecone.index('products'),
+  'SELECT * FROM products WHERE category_name = ?',
+  ['Electronics']
+)
+
+// Perform semantic search
+const searchResults = await adapter.search(
+  pinecone.index('products'),
+  'powerful gaming computer',
+  { topK: 5 }
+)
+```
+
+## Experimental Status
+
+All packages in this ecosystem are currently **experimental**. While they have comprehensive tests and strive for stability, APIs may change as we continue to improve based on community feedback.
+
+## Contributing
+
+Contributions are **really welcome**! As a solo developer, I'm actively looking for help to make these packages better. Whether you want to:
+
+- Report bugs or issues
+- Suggest new features
+- Improve documentation
+- Add support for more databases/vector stores
+- Optimize performance
+- Write more tests
+
+Please feel free to:
+- Open issues on [GitHub](https://github.com/tia-lab/datazod/issues)
+- Submit pull requests
+- Share your use cases and feedback
+
+Every contribution, no matter how small, helps make this ecosystem better for everyone.
 
 ## Development
 
@@ -71,11 +200,29 @@ bun dev
 # Build all packages
 bun build
 
-# Run tests
+# Run tests for all packages
 bun test
+
+# Run tests for specific package
+bun test --filter=@datazod/zod-sql
 ```
 
-### Creating a changeset
+### Package Scripts
+
+Each package has its own scripts:
+
+```bash
+# Build specific package
+cd packages/zod-sql && bun run build
+
+# Test specific package
+cd packages/zod-turso && bun test
+
+# Type check
+bun run check-types
+```
+
+### Creating a Changeset
 
 When making changes that need to be released:
 
@@ -83,6 +230,44 @@ When making changes that need to be released:
 bun changeset
 ```
 
+## Package Dependencies
+
+The packages are designed to work independently or together:
+
+- **@datazod/zod-sql**: Standalone schema-to-SQL converter
+- **@datazod/zod-turso**: Can use zod-sql for table creation, provides data operations
+- **@datazod/zod-pinecone**: Works with zod-turso for data sync, provides vector search
+
+## Use Cases
+
+- **E-commerce platforms**: Product catalogs with semantic search
+- **Content management**: Articles with AI-powered content discovery
+- **Knowledge bases**: Documentation with intelligent search
+- **Data analytics**: Structured data with vector-based insights
+- **SaaS applications**: User data with semantic user matching
+
+## Roadmap
+
+- [ ] Support for more vector databases (Weaviate, Qdrant)
+- [ ] Enhanced query optimization
+- [ ] Real-time sync capabilities
+- [ ] GraphQL schema generation
+- [ ] Migration tools
+- [ ] Performance benchmarks
+- [ ] More SQL dialect support
+
 ## License
 
-MIT
+MIT - See individual package licenses for details.
+
+## Acknowledgments
+
+Special thanks to:
+- The Zod community for the amazing schema validation library
+- Turso team for the excellent SQLite platform
+- Pinecone team for the vector database
+- All contributors and users providing feedback
+
+---
+
+**Start building type-safe, AI-enabled applications with DataZod!**

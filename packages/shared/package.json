@@ -1,0 +1,33 @@
+{
+	"name": "@repo/shared",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Internal shared utilities for datazod packages",
+	"type": "module",
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"files": [
+		"dist",
+		"index.ts"
+	],
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsc --watch",
+		"check-types": "tsc --noEmit",
+		"lint": "echo \"Linting disabled for internal package\""
+	},
+	"peerDependencies": {
+		"zod": "^3.x"
+	},
+	"devDependencies": {
+		"zod": "^3.25.20"
+	},
+	"license": "MIT"
+}
