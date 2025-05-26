@@ -1,5 +1,11 @@
 # @datazod/zod-turso
 
+## 0.1.1
+
+### Patch Changes
+
+- Fixed imports of shared package
+
 ## 0.1.0
 
 ### Minor Changes
