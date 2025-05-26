@@ -60,7 +60,11 @@
 		"zod": "^3.25.20"
 	},
 	"publishConfig": {
-		"access": "public"
+		"access": "public",
+		"dependencies": {
+			"@datazod/shared": "^0.1.0",
+			"uuid": "^10.0.0"
+		}
 	},
 	"license": "MIT"
 }
