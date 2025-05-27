@@ -1,5 +1,13 @@
 # @datazod/zod-pinecone
 
+## 0.1.8
+
+### Patch Changes
+
+- 8a75641: Fix imports for packages
+- Updated dependencies [8a75641]
+  - @datazod/shared@0.1.4
+
 ## 0.1.7
 
 ### Patch Changes

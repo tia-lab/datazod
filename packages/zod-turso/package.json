@@ -1,6 +1,6 @@
 {
 	"name": "@datazod/zod-turso",
-	"version": "0.1.8",
+	"version": "0.1.9",
 	"private": false,
 	"description": "Convert Zod schemas to Turso compatible models with type safety",
 	"author": {
@@ -47,7 +47,7 @@
 		"zod": "^3.x"
 	},
 	"dependencies": {
-		"@datazod/shared": "^0.1.3",
+		"@datazod/shared": "^0.1.4",
 		"uuid": "^9.0.0"
 	},
 	"devDependencies": {
