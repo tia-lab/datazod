@@ -1,17 +1,9 @@
 {
 	"extends": "@repo/typescript-config/base.json",
 	"compilerOptions": {
-		"strict": true,
-		"esModuleInterop": true,
-		"skipLibCheck": true,
-		"module": "ESNext",
-		"moduleResolution": "Bundler",
-		"declaration": true,
-		"isolatedModules": true,
 		"outDir": "./dist",
-		"paths": {
-			"@datazod/shared": ["../shared/src"]
-		}
+		"module": "ESNext",
+		"moduleResolution": "bundler"
 	},
 	"include": ["src/**/*", "index.ts"],
 	"exclude": ["node_modules", "**/*.test.ts"]

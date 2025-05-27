@@ -23,18 +23,17 @@
 		"type-safety"
 	],
 	"type": "module",
-	"main": "./dist/zod-turso/index.js",
-	"module": "./dist/zod-turso/index.js",
-	"types": "./dist/zod-turso/index.d.ts",
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
-			"import": "./dist/zod-turso/index.js",
-			"types": "./dist/zod-turso/index.d.ts"
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
 		}
 	},
 	"files": [
-		"dist",
-		"index.ts"
+		"dist"
 	],
 	"scripts": {
 		"build": "tsc",

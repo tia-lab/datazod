@@ -1,17 +1,9 @@
 {
 	"extends": "@repo/typescript-config/base.json",
 	"compilerOptions": {
-		"strict": true,
-		"esModuleInterop": true,
-		"skipLibCheck": true,
+		"outDir": "./dist",
 		"module": "ESNext",
-		"moduleResolution": "Bundler",
-		"declaration": true,
-		"isolatedModules": true,
-		"outDir": "./dist/zod-pinecone",
-		"paths": {
-			"@datazod/shared": ["../shared/src"]
-		}
+		"moduleResolution": "bundler"
 	},
 	"include": ["src/**/*", "index.ts"],
 	"exclude": ["node_modules", "**/*.test.ts"]

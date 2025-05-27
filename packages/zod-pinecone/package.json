@@ -23,18 +23,17 @@
 		"vector database"
 	],
 	"type": "module",
-	"main": "./dist/zod-pinecone/index.js",
-	"module": "./dist/zod-pinecone/index.js",
-	"types": "./dist/zod-pinecone/index.d.ts",
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
-			"import": "./dist/zod-pinecone/index.js",
-			"types": "./dist/zod-pinecone/index.d.ts"
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
 		}
 	},
 	"files": [
-		"dist",
-		"index.ts"
+		"dist"
 	],
 	"scripts": {
 		"build": "tsc",
