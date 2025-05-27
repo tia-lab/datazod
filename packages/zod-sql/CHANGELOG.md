@@ -1,5 +1,11 @@
 # @datazod/zod-sql
 
+## 0.2.6
+
+### Patch Changes
+
+- fix: update package descriptions and adjust output paths for zod packages
+
 ## 0.2.5
 
 ### Patch Changes

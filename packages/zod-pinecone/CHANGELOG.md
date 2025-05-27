@@ -1,5 +1,11 @@
 # @datazod/zod-pinecone
 
+## 0.1.6
+
+### Patch Changes
+
+- fix: update package descriptions and adjust output paths for zod packages
+
 ## 0.1.5
 
 ### Patch Changes
