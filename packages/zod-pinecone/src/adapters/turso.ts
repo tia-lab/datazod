@@ -136,22 +136,22 @@ export function createTursoPineconeAdapter(options: TursoPineconeAdapterOptions)
 					const embedding = await generateEmbedding(embeddingText)
 
 					// Prepare metadata from Turso columns directly
-					const metadata: Record<string, any> = {}
+					let metadata: Record<string, any> = {}
 					
 					if (metadataFields) {
 						// Include only specified fields
-						for (const field of metadataFields) {
-							if (record[field] !== undefined && record[field] !== null) {
-								metadata[field] = cleanValueForPinecone(record[field])
-							}
-						}
+						metadata = Object.fromEntries(
+							metadataFields
+								.filter(field => record[field] !== undefined && record[field] !== null)
+								.map(field => [field, cleanValueForPinecone(record[field])])
+						)
 					} else {
 						// Include all Turso columns as metadata
-						for (const [key, value] of Object.entries(record)) {
-							if (value !== undefined && value !== null) {
-								metadata[key] = cleanValueForPinecone(value)
-							}
-						}
+						metadata = Object.fromEntries(
+							Object.entries(record)
+								.filter(([_, value]) => value !== undefined && value !== null)
+								.map(([key, value]) => [key, cleanValueForPinecone(value)])
+						)
 					}
 
 					// Add mapping fields

@@ -8,7 +8,7 @@
 		"moduleResolution": "Bundler",
 		"declaration": true,
 		"isolatedModules": true,
-		"outDir": "./dist",
+		"outDir": "./dist/zod-pinecone",
 		"paths": {
 			"@datazod/shared": ["../shared/src"]
 		}

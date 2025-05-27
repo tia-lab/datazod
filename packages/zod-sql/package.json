@@ -24,13 +24,13 @@
 		"database"
 	],
 	"type": "module",
-	"main": "./dist/index.js",
-	"module": "./dist/index.js",
-	"types": "./dist/index.d.ts",
+	"main": "./dist/zod-sql/index.js",
+	"module": "./dist/zod-sql/index.js",
+	"types": "./dist/zod-sql/index.d.ts",
 	"exports": {
 		".": {
-			"import": "./dist/index.js",
-			"types": "./dist/index.d.ts"
+			"import": "./dist/zod-sql/index.js",
+			"types": "./dist/zod-sql/index.d.ts"
 		}
 	},
 	"files": [
