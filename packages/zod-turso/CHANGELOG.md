@@ -1,5 +1,11 @@
 # @datazod/zod-turso
 
+## 0.1.8
+
+### Patch Changes
+
+- Fix impooets uuid
+
 ## 0.1.7
 
 ### Patch Changes
