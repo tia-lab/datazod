@@ -1,6 +1,6 @@
 {
 	"name": "@datazod/zod-pinecone",
-	"version": "0.1.6",
+	"version": "0.1.7",
 	"private": false,
 	"description": "Convert Zod schemas to Pinecone vector database definitions",
 	"author": {

@@ -1,5 +1,11 @@
 # @datazod/zod-pinecone
 
+## 0.1.7
+
+### Patch Changes
+
+- Fix imports
+
 ## 0.1.6
 
 ### Patch Changes

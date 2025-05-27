@@ -1,6 +1,6 @@
 {
 	"name": "@datazod/zod-sql",
-	"version": "0.2.6",
+	"version": "0.2.7",
 	"private": false,
 	"description": "Convert Zod schemas to SQL table definitions with support for SQLite, PostgreSQL, and MySQL",
 	"author": {
