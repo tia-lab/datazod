@@ -12,7 +12,9 @@ export {
 	prepareInsertQuery,
 	prepareUpdateQuery,
 	prepareBatchInsertQuery,
-	processBatch
+	processBatch,
+	migrateTable,
+	getTableColumns
 } from './helpers'
 
 // Utilities

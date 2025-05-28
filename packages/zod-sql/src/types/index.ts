@@ -1,4 +1,4 @@
-export type { TableOptions, TableStructure } from './table'
+export type { TableOptions, TableWithMigrationOptions, TableStructure } from './table'
 export type {
 	TableTypes,
 	TimeStampsSchema,

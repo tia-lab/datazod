@@ -14,6 +14,7 @@ npm install @datazod/zod-sql
 ```
 
 **Key Features:**
+- Automatic schema migrations with safe column addition and removal
 - Multi-dialect support (SQLite/Turso, PostgreSQL, MySQL)
 - Intelligent nested object flattening
 - Auto-generated fields (IDs, timestamps)
@@ -23,18 +24,19 @@ npm install @datazod/zod-sql
 ### [@datazod/zod-turso](./packages/zod-turso)
 [![NPM Version](https://img.shields.io/npm/v/@datazod/zod-turso.svg)](https://www.npmjs.com/package/@datazod/zod-turso)
 
-A type-safe Turso/SQLite ORM with data flattening, batch operations, and query building capabilities.
+A type-safe Turso/SQLite ORM with automatic migrations, clean query results, data flattening, and batch operations.
 
 ```bash
 npm install @datazod/zod-turso @libsql/client zod
 ```
 
 **Key Features:**
+- Automatic migrations during insert operations
+- Clean query results (removes array indices)
 - Type-safe database operations
 - Data flattening for nested objects
 - Batch processing with progress tracking
 - Fluent query builder API
-- Auto field generation
 
 ### [@datazod/zod-pinecone](./packages/zod-pinecone)
 [![NPM Version](https://img.shields.io/npm/v/@datazod/zod-pinecone.svg)](https://www.npmjs.com/package/@datazod/zod-pinecone)
@@ -160,6 +162,140 @@ const searchResults = await adapter.search(
   'powerful gaming computer',
   { topK: 5 }
 )
+```
+
+## Schema Evolution & Migration Workflows
+
+DataZod provides seamless schema evolution capabilities. Here are comprehensive examples showing how to safely evolve your database schema.
+
+### Basic Migration Workflow
+
+```typescript
+import { z } from 'zod'
+import { createTableWithMigration } from '@datazod/zod-sql'
+import { createClient } from '@libsql/client'
+
+const client = createClient({ url: 'your-turso-url', authToken: 'token' })
+
+// 1. Start with a simple schema
+const UserSchemaV1 = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string()
+})
+
+// Create table with migration support
+const { table } = await createTableWithMigration('users', UserSchemaV1, {
+  migrate: true,
+  debug: true
+}, client)
+
+await client.execute(table)
+
+// 2. Evolve schema - add new columns
+const UserSchemaV2 = z.object({
+  id: z.string(),
+  name: z.string(), 
+  email: z.string(),
+  age: z.number(),           // New column
+  preferences: z.string()     // New column
+})
+
+// Migration will automatically add new columns
+await createTableWithMigration('users', UserSchemaV2, {
+  migrate: true,
+  debug: true
+}, client)
+```
+
+### Advanced Migration with Column Removal
+
+```typescript
+// When you need to remove columns, use allowDrop for safe data preservation
+const UserSchemaV3 = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  age: z.number()
+  // preferences column removed
+})
+
+// This will:
+// 1. Backup existing data
+// 2. Drop old table  
+// 3. Create new table
+// 4. Restore data (only for columns that exist in new schema)
+await createTableWithMigration('users', UserSchemaV3, {
+  migrate: true,
+  allowDrop: true,  // Required for column removal
+  debug: true
+}, client)
+```
+
+### Automatic Migration During Inserts
+
+```typescript
+import { createTursoInserter } from '@datazod/zod-turso'
+
+// Create inserter with auto-migration
+const inserter = createTursoInserter('products', ProductSchema, {
+  migrate: true,     // Enable auto-migration
+  debug: true        // See migration logs
+})
+
+// When you insert data with a new schema, 
+// missing columns are automatically added
+await inserter.single(client, {
+  name: 'New Product',
+  newField: 'This column will be auto-created'  // New field
+})
+```
+
+### Clean Query Results
+
+```typescript
+import { findBy } from '@datazod/zod-turso'
+
+// Regular query (includes array indices)
+const rawResults = await findBy({
+  tableName: 'users',
+  schema: UserSchema,
+  turso: client,
+  field: 'name',
+  value: 'John'
+})
+// Returns: { "0": "john@email.com", "1": "John", email: "john@email.com", name: "John" }
+
+// Clean query (schema-only fields)
+const cleanResults = await findBy({
+  tableName: 'users', 
+  schema: UserSchema,
+  turso: client,
+  field: 'name',
+  value: 'John',
+  clean: true  // Remove array indices
+})
+// Returns: { email: "john@email.com", name: "John" }
+```
+
+### Production Migration Strategy
+
+```typescript
+// Recommended production approach
+const migrationOptions = {
+  migrate: true,
+  allowDrop: false,     // Safer for production
+  debug: false          // Reduce log noise
+}
+
+try {
+  await createTableWithMigration('users', NewSchema, migrationOptions, client)
+} catch (error) {
+  if (error.message.includes('Cannot remove columns')) {
+    console.log('Manual intervention required for column removal')
+    // Handle column removal with your preferred strategy
+  }
+}
 ```
 
 ## Experimental Status

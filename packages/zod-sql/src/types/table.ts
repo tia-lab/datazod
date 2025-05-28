@@ -8,6 +8,16 @@ export interface TableOptions extends ExtendedOptions {
 }
 
 /**
+ * Table options with migration support
+ */
+export interface TableWithMigrationOptions extends TableOptions {
+	// Migration options
+	migrate?: boolean
+	allowDrop?: boolean
+	debug?: boolean
+}
+
+/**
  * Table structure representation
  */
 export interface TableStructure {

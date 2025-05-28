@@ -40,6 +40,7 @@ export interface FindByOptions<T extends ZodRawShape> {
 	limit?: number
 	orderBy?: string
 	direction?: 'ASC' | 'DESC'
+	clean?: boolean
 }
 
 /**
@@ -53,7 +54,8 @@ export async function findBy<T extends ZodRawShape>({
 	value,
 	limit,
 	orderBy,
-	direction = 'ASC'
+	direction = 'ASC',
+	clean = false
 }: FindByOptions<T>): Promise<Record<string, any>[]> {
 	const query = new TursoQueryBuilder(tableName, schema)
 		.selectAll()
@@ -67,7 +69,21 @@ export async function findBy<T extends ZodRawShape>({
 		query.orderBy(orderBy as any, direction)
 	}
 
-	return await query.all(turso)
+	const results = await query.all(turso)
+	
+	if (clean) {
+		return results.map(row => {
+			const cleanRow: Record<string, any> = {}
+			Object.keys(schema.shape).forEach(key => {
+				if (row[key] !== undefined) {
+					cleanRow[key] = row[key]
+				}
+			})
+			return cleanRow
+		})
+	}
+
+	return results
 }
 
 export interface FindLatestOptions<T extends ZodRawShape> {

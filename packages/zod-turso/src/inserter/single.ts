@@ -1,6 +1,6 @@
 import type { ZodObject, ZodRawShape } from 'zod'
 import type { TursoClient, TursoInserterOptions, InsertResult } from '../types'
-import { flattenForInsert, prepareInsertQuery } from '../helpers'
+import { flattenForInsert, prepareInsertQuery, migrateTable } from '../helpers'
 
 /**
  * Handles single record insertion
@@ -13,6 +13,11 @@ export async function insertSingle<T extends ZodRawShape>(
 	options: TursoInserterOptions
 ): Promise<InsertResult> {
 	try {
+		// Run migration if requested
+		if (options.migrate) {
+			await migrateTable(tableName, schema, client, options.debug)
+		}
+		
 		// Flatten and prepare data
 		const flatData = flattenForInsert(data, schema, options)
 		

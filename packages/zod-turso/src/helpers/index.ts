@@ -3,6 +3,8 @@ export { addAutoFields } from './field-processor'
 export {
 	prepareInsertQuery,
 	prepareUpdateQuery,
-	prepareBatchInsertQuery
+	prepareBatchInsertQuery,
+	migrateTable,
+	getTableColumns
 } from './query-builder'
 export { processBatch } from './batch-processor'

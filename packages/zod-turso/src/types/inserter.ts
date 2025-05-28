@@ -4,7 +4,9 @@ import type { ExtendedOptions } from '@datazod/shared'
  * Turso-specific inserter options
  */
 export interface TursoInserterOptions extends ExtendedOptions {
-	// Turso-specific options can be added here
+	// Migration options
+	migrate?: boolean
+	debug?: boolean
 }
 
 /**

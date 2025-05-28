@@ -5,7 +5,7 @@ import type {
 	BatchInsertOptions,
 	BatchInsertResult
 } from '../types'
-import { flattenForInsert, prepareBatchInsertQuery, processBatch } from '../helpers'
+import { flattenForInsert, prepareBatchInsertQuery, processBatch, migrateTable } from '../helpers'
 
 /**
  * Handles batch record insertion
@@ -27,6 +27,11 @@ export async function insertBatch<T extends ZodRawShape>(
 				errors: [],
 				ids: []
 			}
+		}
+
+		// Run migration if requested
+		if (options.migrate) {
+			await migrateTable(tableName, schema, client, options.debug)
 		}
 
 		// Flatten all data records

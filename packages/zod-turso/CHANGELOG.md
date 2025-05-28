@@ -1,5 +1,11 @@
 # @datazod/zod-turso
 
+## 0.1.10
+
+### Patch Changes
+
+- Added new functionalities to packages
+
 ## 0.1.9
 
 ### Patch Changes

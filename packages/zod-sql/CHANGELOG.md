@@ -1,5 +1,11 @@
 # @datazod/zod-sql
 
+## 0.2.9
+
+### Patch Changes
+
+- Added new functionalities to packages
+
 ## 0.2.8
 
 ### Patch Changes
